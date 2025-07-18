@@ -1,0 +1,34 @@
+# Cursor Rules for DDD Page Builder Project
+
+## Language Settings
+- Always respond in English
+- Always write comments in English
+- Use clear, concise language for all code explanations
+- Generate code with English comments to explain functionality
+
+## Code Style Guidelines
+- Use TypeScript for type safety
+- Follow React best practices
+- Use TailwindCSS for styling
+- Write descriptive variable and function names
+- Include JSDoc comments for complex functions
+
+## Comment Standards
+- Write comments in English only
+- Use clear and descriptive language
+- Explain the "why" not just the "what"
+- Keep comments up to date with code changes
+- Use consistent comment formatting
+
+## AI Assistant Behavior
+- Always generate code with English comments
+- Explain complex logic in English
+- Provide English documentation
+- Use English for all variable names and function names when possible
+- Respond to questions in English
+
+## Project Specific Rules
+- This is a Next.js project with TypeScript
+- Use GrapeJS for the page editor functionality
+- Follow shadcn/ui component patterns
+- Maintain consistent code formatting with Prettier 
