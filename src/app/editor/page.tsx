@@ -2,16 +2,27 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Save, Eye, RotateCcw, Download, Upload } from "lucide-react";
 import StudioEditor from "@grapesjs/studio-sdk/react";
 import "@grapesjs/studio-sdk/style";
-import { EditorInstance, SaveData, SaveStatus } from "@/types/editor";
+import {
+  EditorInstance,
+  SaveData,
+  SaveStatus,
+  PageSaveData,
+  ApiResponse,
+} from "@/types/editor";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import "./editor.css";
 
 export default function EditorPage() {
   const [editor, setEditor] = useState<EditorInstance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [pageTitle, setPageTitle] = useState("");
   const editorRef = useRef<EditorInstance | null>(null);
 
   // Default content for the editor
@@ -57,39 +68,76 @@ export default function EditorPage() {
     .hover\\:bg-gray-600:hover { background-color: #4b5563; }
   `;
 
-  // Save functionality - saves current page to localStorage
+  // Enhanced save functionality with UUID and API call
   const handleSave = async () => {
-    if (!editor) return;
+    if (!editor) {
+      toast.error("Editor not initialized");
+      return;
+    }
 
     setIsLoading(true);
     setSaveStatus("saving");
 
     try {
-      const html = editor.getHtml();
-      const css = editor.getCss();
-      const components = editor.getComponents();
-      const styles = editor.getStyle();
+      // Generate UUID for this save
+      const uuid = uuidv4();
 
-      // Create save data object
-      const saveData: SaveData = {
+      // Get HTML output from GrapeJS
+      const html = editor.getHtml();
+
+      // Create save data with metadata
+      const saveData: PageSaveData = {
+        uuid,
         html,
-        css,
-        components: components.toJSON(),
-        styles: styles.toJSON(),
-        timestamp: new Date().toISOString(),
+        metadata: {
+          pageTitle: pageTitle || "Untitled Page",
+        },
       };
 
-      // Save to localStorage (can also save to server)
-      localStorage.setItem("pageEditorData", JSON.stringify(saveData));
+      // Emit custom event
+      if (editor.trigger) {
+        editor.trigger("page:save", saveData);
+        console.log("Page save event emitted:", saveData);
+      }
 
-      console.log("Page saved:", saveData);
-      setSaveStatus("saved");
+      // Call REST API
+      const response = await fetch(`/api/page/${uuid}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(saveData),
+      });
 
-      // Reset status after 3 seconds
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      const result: ApiResponse = await response.json();
+
+      if (response.ok && result.success) {
+        setSaveStatus("saved");
+        toast.success(`Page saved successfully! UUID: ${uuid}`);
+
+        // Also save to localStorage as backup
+        const localSaveData: SaveData = {
+          html,
+          css: editor.getCss(),
+          components: editor.getComponents().toJSON(),
+          styles: editor.getStyle().toJSON(),
+          timestamp: new Date().toISOString(),
+        };
+        localStorage.setItem("pageEditorData", JSON.stringify(localSaveData));
+
+        // Reset status after 3 seconds
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      } else {
+        throw new Error(result.error || "Save failed");
+      }
     } catch (error) {
       console.error("Save failed:", error);
       setSaveStatus("error");
+      toast.error(
+        `Save failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +158,7 @@ export default function EditorPage() {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Page Preview</title>
+            <title>${pageTitle || "Page Preview"}</title>
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
               ${css}
@@ -137,7 +185,9 @@ export default function EditorPage() {
       editor.CssComposer.clear();
       editor.setComponents(defaultComponents);
       editor.setStyle(defaultStyle);
+      setPageTitle("");
       localStorage.removeItem("pageEditorData");
+      toast.info("Editor reset successfully");
     }
   };
 
@@ -154,7 +204,7 @@ export default function EditorPage() {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Exported Page</title>
+    <title>${pageTitle || "Exported Page"}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>${css}</style>
 </head>
@@ -165,11 +215,14 @@ export default function EditorPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `page-${new Date().toISOString().split("T")[0]}.html`;
+    a.download = `${pageTitle || "page"}-${
+      new Date().toISOString().split("T")[0]
+    }.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success("Page exported successfully");
   };
 
   // Import functionality - loads HTML or JSON files
@@ -188,6 +241,7 @@ export default function EditorPage() {
 
             if (editor && data.components && data.styles) {
               editor.load(data);
+              toast.success("Page imported successfully");
             } else {
               // If it's an HTML file, try to parse it
               const parser = new DOMParser();
@@ -195,11 +249,12 @@ export default function EditorPage() {
               const bodyContent = doc.body.innerHTML;
               if (editor && bodyContent) {
                 editor.setComponents(bodyContent);
+                toast.success("HTML imported successfully");
               }
             }
           } catch (error) {
             console.error("Import failed:", error);
-            alert("Import failed, please check the file format");
+            toast.error("Import failed, please check the file format");
           }
         };
         reader.readAsText(file);
@@ -224,8 +279,10 @@ export default function EditorPage() {
       try {
         const data = JSON.parse(savedData);
         editor.load(data);
+        toast.info("Previous session restored");
       } catch (error) {
         console.error("Failed to load saved data:", error);
+        toast.error("Failed to restore previous session");
       }
     }
   };
@@ -236,6 +293,26 @@ export default function EditorPage() {
       <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-gray-800">Page Editor</h1>
+
+          {/* Page Title Input */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="pageTitle"
+              className="text-sm font-medium text-gray-700"
+            >
+              Page Title:
+            </label>
+            <Input
+              id="pageTitle"
+              type="text"
+              placeholder="Enter page title..."
+              value={pageTitle}
+              onChange={(e) => setPageTitle(e.target.value)}
+              className="w-64"
+            />
+          </div>
+
+          {/* Save Status */}
           {saveStatus === "saving" && (
             <span className="text-sm text-blue-600">Saving...</span>
           )}
@@ -296,6 +373,9 @@ export default function EditorPage() {
       <div className="flex-1 overflow-hidden">
         <StudioEditor onEditor={handleEditorInit} />
       </div>
+
+      {/* Toast notifications */}
+      <Toaster />
     </div>
   );
 }

@@ -18,6 +18,7 @@ export interface EditorInstance {
   load: (data: any) => void;
   on: (event: string, callback: Function) => void;
   off: (event: string, callback: Function) => void;
+  trigger: (event: string, data?: any) => void;
   destroy: () => void;
 }
 
@@ -28,6 +29,24 @@ export interface SaveData {
   components: any;
   styles: any;
   timestamp: string;
+}
+
+// 新的页面保存接口
+export interface PageSaveData {
+  uuid: string;
+  html: string;
+  metadata?: {
+    pageTitle?: string;
+  };
+}
+
+// API 响应接口
+export interface ApiResponse {
+  success: boolean;
+  message: string;
+  uuid?: string;
+  savedAt?: string;
+  error?: string;
 }
 
 // 编辑器配置接口
@@ -55,4 +74,5 @@ export interface EditorEvents {
   "style:add": (style: any) => void;
   "style:remove": (style: any) => void;
   "style:update": (style: any) => void;
+  "page:save": (data: PageSaveData) => void;
 }
