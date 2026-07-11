@@ -31,6 +31,32 @@ export const MODULE_CATALOG: Module[] = [
 </section>`,
   },
   {
+    id: "carousel",
+    name: "Carousel",
+    category: "media",
+    tier: "free",
+    marker: 'data-module="carousel"',
+    // Carousel mechanics (horizontal scroll + snap) use inline styles so the
+    // block renders self-contained in published pages, which ship no JS and only
+    // the page's own CSS. Card look reuses the shared utility classes.
+    blockHtml: `<section data-module="carousel" class="container mx-auto px-4 py-8">
+  <div style="display:flex;gap:1rem;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:0.5rem">
+    <div class="bg-white rounded-lg shadow-md p-6" style="flex:0 0 80%;scroll-snap-align:start;min-height:160px">
+      <h3 class="text-xl font-bold text-gray-800 mb-2">Slide one</h3>
+      <p class="text-gray-600">Add your content here.</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6" style="flex:0 0 80%;scroll-snap-align:start;min-height:160px">
+      <h3 class="text-xl font-bold text-gray-800 mb-2">Slide two</h3>
+      <p class="text-gray-600">Add your content here.</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6" style="flex:0 0 80%;scroll-snap-align:start;min-height:160px">
+      <h3 class="text-xl font-bold text-gray-800 mb-2">Slide three</h3>
+      <p class="text-gray-600">Add your content here.</p>
+    </div>
+  </div>
+</section>`,
+  },
+  {
     id: "pricing-table",
     name: "Pricing Table",
     category: "commerce",
