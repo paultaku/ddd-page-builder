@@ -16,6 +16,9 @@ export interface Page {
   published: boolean;
   publishedAt?: string; // ISO8601
   slug?: string;
+  // Provenance: the template this page was created from (T1). Absent for blank
+  // or legacy pages.
+  templateId?: string;
 }
 
 // Coerce a persisted record (possibly written before a field existed) into a

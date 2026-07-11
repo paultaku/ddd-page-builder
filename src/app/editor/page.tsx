@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { ModulePanel } from "@/components/module-panel";
+import { TemplatePanel } from "@/components/template-panel";
 import "./editor.css";
 
 export default function EditorPage() {
@@ -29,6 +30,9 @@ export default function EditorPage() {
   // Stable page identity: generated once, reused across saves so that saving
   // is an update, not a fresh create. Cleared only on reset.
   const [pageUuid, setPageUuid] = useState<string>("");
+  // Provenance: which template this page was created from (T1). Undefined for a
+  // blank page. Persisted with the page and re-checked at publish (paid gate).
+  const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const editorRef = useRef<EditorInstance | null>(null);
 
   // Default content for the editor
@@ -101,6 +105,7 @@ export default function EditorPage() {
         uuid,
         html,
         css,
+        templateId,
         metadata: {
           pageTitle: pageTitle || "Untitled Page",
         },
@@ -182,6 +187,7 @@ export default function EditorPage() {
           uuid,
           html: editor.getHtml(),
           css: editor.getCss(),
+          templateId,
           metadata: { pageTitle: pageTitle || "Untitled Page" },
         }),
       });
@@ -196,13 +202,17 @@ export default function EditorPage() {
       });
       const publishResult = await publishResponse.json();
       if (!publishResponse.ok || !publishResult.success) {
-        // Surface a gated-publish (Proposal C) or any other failure honestly.
-        const blocked: Array<{ name: string }> | undefined =
-          publishResult.blockedModules;
-        if (blocked?.length) {
-          throw new Error(
-            `Upgrade required for: ${blocked.map((m) => m.name).join(", ")}`
-          );
+        // Surface a gated-publish (module and/or template) or any other failure.
+        const blockedNames: string[] = [
+          ...((publishResult.blockedModules as Array<{ name: string }>) ?? []).map(
+            (m) => m.name
+          ),
+          ...(publishResult.blockedTemplate
+            ? [publishResult.blockedTemplate.name]
+            : []),
+        ];
+        if (blockedNames.length) {
+          throw new Error(`Upgrade required for: ${blockedNames.join(", ")}`);
         }
         throw new Error(publishResult.error || "Publish failed");
       }
@@ -269,6 +279,7 @@ export default function EditorPage() {
       editor.setStyle(defaultStyle);
       setPageTitle("");
       setPageUuid("");
+      setTemplateId(undefined);
       localStorage.removeItem("pageEditorData");
       toast.info("Editor reset successfully");
     }
@@ -371,6 +382,7 @@ export default function EditorPage() {
           if (page.css) editor.setStyle(page.css);
           setPageUuid(page.uuid);
           setPageTitle(page.title === "Untitled Page" ? "" : page.title);
+          setTemplateId(page.templateId);
           toast.info("Loaded saved page");
         })
         .catch((error) => {
@@ -439,6 +451,10 @@ export default function EditorPage() {
         </div>
 
         <div className="flex gap-2">
+          <TemplatePanel
+            editor={editor}
+            onTemplateApplied={(id) => setTemplateId(id)}
+          />
           <ModulePanel editor={editor} />
           <Button
             onClick={handleSave}
