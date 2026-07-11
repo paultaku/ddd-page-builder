@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { ANONYMOUS_OWNER_ID } from "@/domain/page/Page";
 import { findUsedModules } from "@/domain/module-catalog/Module";
 import { isPublishable } from "@/domain/module-catalog/Entitlement";
+import { templateEntitlementKey } from "@/domain/template/Template";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
 import { getModuleCatalog } from "@/infrastructure/module-catalog/moduleCatalog";
+import { getTemplateRepository } from "@/infrastructure/template/SeededTemplateRepository";
 import { getEntitlementRepository } from "@/infrastructure/module-catalog/FileEntitlementRepository";
 
 export const runtime = "nodejs";
@@ -46,9 +48,25 @@ export async function POST(
           blockedModules.push({ id: module.id, name: module.name });
         }
       }
-      if (blockedModules.length > 0) {
+      // Also gate the page's source template if it is paid and not granted.
+      let blockedTemplate: { id: string; name: string } | undefined;
+      if (page.templateId) {
+        const template = await getTemplateRepository().findById(page.templateId);
+        if (template) {
+          const state = await entitlements.getState(
+            ANONYMOUS_OWNER_ID,
+            templateEntitlementKey(template.id),
+            template.tier
+          );
+          if (!isPublishable(state)) {
+            blockedTemplate = { id: template.id, name: template.name };
+          }
+        }
+      }
+
+      if (blockedModules.length > 0 || blockedTemplate) {
         return NextResponse.json(
-          { error: "Upgrade required to publish", blockedModules },
+          { error: "Upgrade required to publish", blockedModules, blockedTemplate },
           { status: 403 }
         );
       }

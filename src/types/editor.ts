@@ -36,6 +36,7 @@ export interface PageSaveData {
   uuid: string;
   html: string;
   css?: string;
+  templateId?: string;
   metadata?: {
     pageTitle?: string;
   };
@@ -50,6 +51,7 @@ export interface StoredPage {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+  templateId?: string;
 }
 
 // API 响应接口

@@ -10,6 +10,7 @@ interface SavePagePayload {
   uuid: string;
   html: string;
   css?: string;
+  templateId?: string;
   metadata?: {
     pageTitle?: string;
   };
@@ -55,6 +56,7 @@ export async function POST(
       published: existing?.published ?? false,
       publishedAt: existing?.publishedAt,
       slug: existing?.slug,
+      templateId: body.templateId ?? existing?.templateId,
     };
     await repo.save(page);
 
