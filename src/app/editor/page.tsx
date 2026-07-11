@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, Eye, RotateCcw, Download, Upload } from "lucide-react";
+import { Save, Eye, RotateCcw, Download, Upload, Rocket } from "lucide-react";
 import StudioEditor from "@grapesjs/studio-sdk/react";
 import "@grapesjs/studio-sdk/style";
 import {
@@ -12,10 +13,12 @@ import {
   SaveStatus,
   PageSaveData,
   ApiResponse,
+  StoredPage,
 } from "@/types/editor";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { ModulePanel } from "@/components/module-panel";
 import "./editor.css";
 
 export default function EditorPage() {
@@ -23,6 +26,9 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [pageTitle, setPageTitle] = useState("");
+  // Stable page identity: generated once, reused across saves so that saving
+  // is an update, not a fresh create. Cleared only on reset.
+  const [pageUuid, setPageUuid] = useState<string>("");
   const editorRef = useRef<EditorInstance | null>(null);
 
   // Default content for the editor
@@ -79,16 +85,22 @@ export default function EditorPage() {
     setSaveStatus("saving");
 
     try {
-      // Generate UUID for this save
-      const uuid = uuidv4();
+      // Reuse the stable page identity; only mint one the first time.
+      let uuid = pageUuid;
+      if (!uuid) {
+        uuid = uuidv4();
+        setPageUuid(uuid);
+      }
 
-      // Get HTML output from GrapeJS
+      // Get HTML + compiled CSS from GrapeJS
       const html = editor.getHtml();
+      const css = editor.getCss();
 
       // Create save data with metadata
       const saveData: PageSaveData = {
         uuid,
         html,
+        css,
         metadata: {
           pageTitle: pageTitle || "Untitled Page",
         },
@@ -113,7 +125,9 @@ export default function EditorPage() {
 
       if (response.ok && result.success) {
         setSaveStatus("saved");
-        toast.success(`Page saved successfully! UUID: ${uuid}`);
+        // The page is now persisted server-side under this stable UUID and can
+        // be reopened via /editor?uuid=... or from the My Pages list.
+        toast.success(`Page saved. UUID: ${uuid}`);
 
         // Also save to localStorage as backup
         const localSaveData: SaveData = {
@@ -143,6 +157,75 @@ export default function EditorPage() {
     }
   };
 
+  // Publish functionality - persists the latest content, then serves it at a
+  // public, shareable URL. This is the explicit gate the trial entitlement
+  // check (Proposal C) hooks into.
+  const handlePublish = async () => {
+    if (!editor) {
+      toast.error("Editor not initialized");
+      return;
+    }
+
+    let uuid = pageUuid;
+    if (!uuid) {
+      uuid = uuidv4();
+      setPageUuid(uuid);
+    }
+
+    setIsLoading(true);
+    try {
+      // Persist current content first so the published page is up to date.
+      const saveResponse = await fetch(`/api/page/${uuid}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uuid,
+          html: editor.getHtml(),
+          css: editor.getCss(),
+          metadata: { pageTitle: pageTitle || "Untitled Page" },
+        }),
+      });
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save before publishing");
+      }
+
+      const publishResponse = await fetch(`/api/page/${uuid}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ published: true }),
+      });
+      const publishResult = await publishResponse.json();
+      if (!publishResponse.ok || !publishResult.success) {
+        // Surface a gated-publish (Proposal C) or any other failure honestly.
+        const blocked: Array<{ name: string }> | undefined =
+          publishResult.blockedModules;
+        if (blocked?.length) {
+          throw new Error(
+            `Upgrade required for: ${blocked.map((m) => m.name).join(", ")}`
+          );
+        }
+        throw new Error(publishResult.error || "Publish failed");
+      }
+
+      const publicUrl = `${window.location.origin}${publishResult.url}`;
+      try {
+        await navigator.clipboard.writeText(publicUrl);
+        toast.success(`Published! URL copied: ${publicUrl}`);
+      } catch {
+        toast.success(`Published at ${publicUrl}`);
+      }
+    } catch (error) {
+      console.error("Publish failed:", error);
+      toast.error(
+        `Publish failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Preview functionality - opens page in new window
   const handlePreview = () => {
     if (!editor) return;
@@ -159,7 +242,6 @@ export default function EditorPage() {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>${pageTitle || "Page Preview"}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <style>
               ${css}
               body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -186,6 +268,7 @@ export default function EditorPage() {
       editor.setComponents(defaultComponents);
       editor.setStyle(defaultStyle);
       setPageTitle("");
+      setPageUuid("");
       localStorage.removeItem("pageEditorData");
       toast.info("Editor reset successfully");
     }
@@ -205,7 +288,6 @@ export default function EditorPage() {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${pageTitle || "Exported Page"}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>${css}</style>
 </head>
 <body>${html}</body>
@@ -273,7 +355,32 @@ export default function EditorPage() {
     editor.setComponents(defaultComponents);
     editor.setStyle(defaultStyle);
 
-    // Load saved data if available
+    // If opened as /editor?uuid=..., hydrate from the server-stored page and
+    // adopt its stable identity so the next save is an update.
+    const uuidParam = new URLSearchParams(window.location.search).get("uuid");
+    if (uuidParam) {
+      fetch(`/api/page/${uuidParam}`)
+        .then(async (res) => (res.ok ? ((await res.json()) as { page: StoredPage }) : null))
+        .then((data) => {
+          if (!data?.page) {
+            toast.error("Page not found");
+            return;
+          }
+          const { page } = data;
+          editor.setComponents(page.html);
+          if (page.css) editor.setStyle(page.css);
+          setPageUuid(page.uuid);
+          setPageTitle(page.title === "Untitled Page" ? "" : page.title);
+          toast.info("Loaded saved page");
+        })
+        .catch((error) => {
+          console.error("Failed to load page:", error);
+          toast.error("Failed to load page");
+        });
+      return;
+    }
+
+    // Otherwise restore the last browser-local session if present.
     const savedData = localStorage.getItem("pageEditorData");
     if (savedData) {
       try {
@@ -293,6 +400,13 @@ export default function EditorPage() {
       <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-gray-800">Page Editor</h1>
+
+          <Link
+            href="/pages"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            My Pages
+          </Link>
 
           {/* Page Title Input */}
           <div className="flex items-center gap-2">
@@ -325,6 +439,7 @@ export default function EditorPage() {
         </div>
 
         <div className="flex gap-2">
+          <ModulePanel editor={editor} />
           <Button
             onClick={handleSave}
             variant="default"
@@ -333,6 +448,15 @@ export default function EditorPage() {
           >
             <Save className="w-4 h-4" />
             Save
+          </Button>
+          <Button
+            onClick={handlePublish}
+            variant="default"
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Rocket className="w-4 h-4" />
+            Publish
           </Button>
           <Button
             onClick={handlePreview}
