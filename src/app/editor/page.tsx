@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Save, Eye, RotateCcw, Download, Upload } from "lucide-react";
@@ -12,6 +13,7 @@ import {
   SaveStatus,
   PageSaveData,
   ApiResponse,
+  StoredPage,
 } from "@/types/editor";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -89,13 +91,15 @@ export default function EditorPage() {
         setPageUuid(uuid);
       }
 
-      // Get HTML output from GrapeJS
+      // Get HTML + compiled CSS from GrapeJS
       const html = editor.getHtml();
+      const css = editor.getCss();
 
       // Create save data with metadata
       const saveData: PageSaveData = {
         uuid,
         html,
+        css,
         metadata: {
           pageTitle: pageTitle || "Untitled Page",
         },
@@ -120,9 +124,9 @@ export default function EditorPage() {
 
       if (response.ok && result.success) {
         setSaveStatus("saved");
-        // Honest copy: the server endpoint does not yet persist (see A2).
-        // The only durable store right now is this browser's localStorage.
-        toast.success(`Saved to this browser. UUID: ${uuid}`);
+        // The page is now persisted server-side under this stable UUID and can
+        // be reopened via /editor?uuid=... or from the My Pages list.
+        toast.success(`Page saved. UUID: ${uuid}`);
 
         // Also save to localStorage as backup
         const localSaveData: SaveData = {
@@ -283,7 +287,32 @@ export default function EditorPage() {
     editor.setComponents(defaultComponents);
     editor.setStyle(defaultStyle);
 
-    // Load saved data if available
+    // If opened as /editor?uuid=..., hydrate from the server-stored page and
+    // adopt its stable identity so the next save is an update.
+    const uuidParam = new URLSearchParams(window.location.search).get("uuid");
+    if (uuidParam) {
+      fetch(`/api/page/${uuidParam}`)
+        .then(async (res) => (res.ok ? ((await res.json()) as { page: StoredPage }) : null))
+        .then((data) => {
+          if (!data?.page) {
+            toast.error("Page not found");
+            return;
+          }
+          const { page } = data;
+          editor.setComponents(page.html);
+          if (page.css) editor.setStyle(page.css);
+          setPageUuid(page.uuid);
+          setPageTitle(page.title === "Untitled Page" ? "" : page.title);
+          toast.info("Loaded saved page");
+        })
+        .catch((error) => {
+          console.error("Failed to load page:", error);
+          toast.error("Failed to load page");
+        });
+      return;
+    }
+
+    // Otherwise restore the last browser-local session if present.
     const savedData = localStorage.getItem("pageEditorData");
     if (savedData) {
       try {
@@ -303,6 +332,13 @@ export default function EditorPage() {
       <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-gray-800">Page Editor</h1>
+
+          <Link
+            href="/pages"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            My Pages
+          </Link>
 
           {/* Page Title Input */}
           <div className="flex items-center gap-2">

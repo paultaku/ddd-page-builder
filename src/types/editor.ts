@@ -35,9 +35,21 @@ export interface SaveData {
 export interface PageSaveData {
   uuid: string;
   html: string;
+  css?: string;
   metadata?: {
     pageTitle?: string;
   };
+}
+
+// 從伺服器讀回的頁面（GET /api/page/[uuid]）
+export interface StoredPage {
+  uuid: string;
+  title: string;
+  html: string;
+  css: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // API 响应接口
