@@ -11,6 +11,7 @@ interface SavePagePayload {
   html: string;
   css?: string;
   templateId?: string;
+  purchaseUrl?: string;
   metadata?: {
     pageTitle?: string;
   };
@@ -57,6 +58,7 @@ export async function POST(
       publishedAt: existing?.publishedAt,
       slug: existing?.slug,
       templateId: body.templateId ?? existing?.templateId,
+      purchaseUrl: body.purchaseUrl ?? existing?.purchaseUrl,
     };
     await repo.save(page);
 

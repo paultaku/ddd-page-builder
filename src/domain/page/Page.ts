@@ -19,6 +19,9 @@ export interface Page {
   // Provenance: the template this page was created from (T1). Absent for blank
   // or legacy pages.
   templateId?: string;
+  // Commerce (T4): outbound purchase/checkout link injected into the page's
+  // `data-commerce-cta` button at render time. No payment processing.
+  purchaseUrl?: string;
 }
 
 // Coerce a persisted record (possibly written before a field existed) into a
