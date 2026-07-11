@@ -7,7 +7,7 @@ import {
 import type { ModuleTier } from "@/domain/module-catalog/Module";
 import { findModuleById } from "@/infrastructure/module-catalog/moduleCatalog";
 import { templateEntitlementKey } from "@/domain/template/Template";
-import { getTemplateRepository } from "@/infrastructure/template/SeededTemplateRepository";
+import { getTemplateRepository } from "@/infrastructure/template/templateRepository";
 import { getEntitlementRepository } from "@/infrastructure/module-catalog/FileEntitlementRepository";
 
 export const runtime = "nodejs";
