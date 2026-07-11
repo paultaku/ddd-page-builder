@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
+import { injectPurchaseUrl } from "@/lib/purchaseLink";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,7 @@ export async function GET(
 <style>${page.css}
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }</style>
 </head>
-<body>${page.html}</body>
+<body>${injectPurchaseUrl(page.html, page.purchaseUrl)}</body>
 </html>`;
 
   return new NextResponse(doc, {

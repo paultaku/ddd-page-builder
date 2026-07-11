@@ -37,6 +37,7 @@ export interface PageSaveData {
   html: string;
   css?: string;
   templateId?: string;
+  purchaseUrl?: string;
   metadata?: {
     pageTitle?: string;
   };
@@ -52,6 +53,7 @@ export interface StoredPage {
   createdAt: string;
   updatedAt: string;
   templateId?: string;
+  purchaseUrl?: string;
 }
 
 // API 响应接口

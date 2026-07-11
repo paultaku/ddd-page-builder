@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { ModulePanel } from "@/components/module-panel";
 import { TemplatePanel } from "@/components/template-panel";
+import { injectPurchaseUrl } from "@/lib/purchaseLink";
 import "./editor.css";
 
 export default function EditorPage() {
@@ -33,6 +34,8 @@ export default function EditorPage() {
   // Provenance: which template this page was created from (T1). Undefined for a
   // blank page. Persisted with the page and re-checked at publish (paid gate).
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
+  // Commerce (T4): outbound purchase link injected into the page's buy CTA.
+  const [purchaseUrl, setPurchaseUrl] = useState<string>("");
   const editorRef = useRef<EditorInstance | null>(null);
 
   // Default content for the editor
@@ -106,6 +109,7 @@ export default function EditorPage() {
         html,
         css,
         templateId,
+        purchaseUrl,
         metadata: {
           pageTitle: pageTitle || "Untitled Page",
         },
@@ -188,6 +192,7 @@ export default function EditorPage() {
           html: editor.getHtml(),
           css: editor.getCss(),
           templateId,
+          purchaseUrl,
           metadata: { pageTitle: pageTitle || "Untitled Page" },
         }),
       });
@@ -257,7 +262,7 @@ export default function EditorPage() {
               body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
             </style>
           </head>
-          <body>${html}</body>
+          <body>${injectPurchaseUrl(html, purchaseUrl)}</body>
         </html>
       `);
       previewWindow.document.close();
@@ -280,6 +285,7 @@ export default function EditorPage() {
       setPageTitle("");
       setPageUuid("");
       setTemplateId(undefined);
+      setPurchaseUrl("");
       localStorage.removeItem("pageEditorData");
       toast.info("Editor reset successfully");
     }
@@ -301,7 +307,7 @@ export default function EditorPage() {
     <title>${pageTitle || "Exported Page"}</title>
     <style>${css}</style>
 </head>
-<body>${html}</body>
+<body>${injectPurchaseUrl(html, purchaseUrl)}</body>
 </html>`;
 
     const blob = new Blob([fullHtml], { type: "text/html" });
@@ -383,6 +389,7 @@ export default function EditorPage() {
           setPageUuid(page.uuid);
           setPageTitle(page.title === "Untitled Page" ? "" : page.title);
           setTemplateId(page.templateId);
+          setPurchaseUrl(page.purchaseUrl ?? "");
           toast.info("Loaded saved page");
         })
         .catch((error) => {
@@ -435,6 +442,24 @@ export default function EditorPage() {
               value={pageTitle}
               onChange={(e) => setPageTitle(e.target.value)}
               className="w-64"
+            />
+          </div>
+
+          {/* Purchase link (T4) — injected into the page's buy CTA on render */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="purchaseUrl"
+              className="text-sm font-medium text-gray-700"
+            >
+              Purchase link:
+            </label>
+            <Input
+              id="purchaseUrl"
+              type="url"
+              placeholder="https://…/buy"
+              value={purchaseUrl}
+              onChange={(e) => setPurchaseUrl(e.target.value)}
+              className="w-56"
             />
           </div>
 
