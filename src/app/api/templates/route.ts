@@ -18,6 +18,7 @@ const CATEGORIES: TemplateCategory[] = [
   "product-detail",
   "company-landing",
   "one-page-product",
+  "pricing",
 ];
 
 interface CreateTemplatePayload {
