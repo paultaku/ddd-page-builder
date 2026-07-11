@@ -121,6 +121,37 @@ const TEMPLATES: Omit<Template, "source">[] = [
 </section>`,
     css: BASE_CSS,
   },
+  {
+    id: "pricing-page",
+    name: "Pricing Page",
+    category: "pricing",
+    tier: "free",
+    html: `<section class="container mx-auto px-4 py-16 text-center">
+  <h1 class="text-4xl font-bold text-gray-800 mb-4">Simple, transparent pricing</h1>
+  <p class="text-gray-600 mb-8">Choose the plan that fits. Upgrade anytime.</p>
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-lg shadow-md p-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Starter</h2>
+      <p class="price mb-4">$0</p>
+      <p class="text-gray-600 mb-8">For getting started.</p>
+      <a href="#" class="btn">Choose Starter</a>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Pro</h2>
+      <p class="price mb-4">$19</p>
+      <p class="text-gray-600 mb-8">For growing teams.</p>
+      <a href="#" class="btn">Choose Pro</a>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Business</h2>
+      <p class="price mb-4">$49</p>
+      <p class="text-gray-600 mb-8">For scaling up.</p>
+      <a href="#" class="btn">Choose Business</a>
+    </div>
+  </div>
+</section>`,
+    css: BASE_CSS,
+  },
 ];
 
 const withSource = (t: Omit<Template, "source">): Template => ({

@@ -10,7 +10,8 @@ export type TemplateCategory =
   | "store"
   | "product-detail"
   | "company-landing"
-  | "one-page-product";
+  | "one-page-product"
+  | "pricing";
 
 // Where a template came from: a curated in-repo seed, or one a user saved from
 // their own page (T2). User templates are owned and never publish-gated.
