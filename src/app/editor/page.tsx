@@ -427,6 +427,13 @@ export default function EditorPage() {
             My Pages
           </Link>
 
+          <Link
+            href="/sites"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            Sites
+          </Link>
+
           {/* Page Title Input */}
           <div className="flex items-center gap-2">
             <label
