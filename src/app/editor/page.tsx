@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, Eye, RotateCcw, Download, Upload } from "lucide-react";
+import { Save, Eye, RotateCcw, Download, Upload, Rocket } from "lucide-react";
 import StudioEditor from "@grapesjs/studio-sdk/react";
 import "@grapesjs/studio-sdk/style";
 import {
@@ -156,6 +156,75 @@ export default function EditorPage() {
     }
   };
 
+  // Publish functionality - persists the latest content, then serves it at a
+  // public, shareable URL. This is the explicit gate the trial entitlement
+  // check (Proposal C) hooks into.
+  const handlePublish = async () => {
+    if (!editor) {
+      toast.error("Editor not initialized");
+      return;
+    }
+
+    let uuid = pageUuid;
+    if (!uuid) {
+      uuid = uuidv4();
+      setPageUuid(uuid);
+    }
+
+    setIsLoading(true);
+    try {
+      // Persist current content first so the published page is up to date.
+      const saveResponse = await fetch(`/api/page/${uuid}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uuid,
+          html: editor.getHtml(),
+          css: editor.getCss(),
+          metadata: { pageTitle: pageTitle || "Untitled Page" },
+        }),
+      });
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save before publishing");
+      }
+
+      const publishResponse = await fetch(`/api/page/${uuid}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ published: true }),
+      });
+      const publishResult = await publishResponse.json();
+      if (!publishResponse.ok || !publishResult.success) {
+        // Surface a gated-publish (Proposal C) or any other failure honestly.
+        const blocked: Array<{ name: string }> | undefined =
+          publishResult.blockedModules;
+        if (blocked?.length) {
+          throw new Error(
+            `Upgrade required for: ${blocked.map((m) => m.name).join(", ")}`
+          );
+        }
+        throw new Error(publishResult.error || "Publish failed");
+      }
+
+      const publicUrl = `${window.location.origin}${publishResult.url}`;
+      try {
+        await navigator.clipboard.writeText(publicUrl);
+        toast.success(`Published! URL copied: ${publicUrl}`);
+      } catch {
+        toast.success(`Published at ${publicUrl}`);
+      }
+    } catch (error) {
+      console.error("Publish failed:", error);
+      toast.error(
+        `Publish failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Preview functionality - opens page in new window
   const handlePreview = () => {
     if (!editor) return;
@@ -172,7 +241,6 @@ export default function EditorPage() {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>${pageTitle || "Page Preview"}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <style>
               ${css}
               body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -219,7 +287,6 @@ export default function EditorPage() {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${pageTitle || "Exported Page"}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>${css}</style>
 </head>
 <body>${html}</body>
@@ -379,6 +446,15 @@ export default function EditorPage() {
           >
             <Save className="w-4 h-4" />
             Save
+          </Button>
+          <Button
+            onClick={handlePublish}
+            variant="default"
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Rocket className="w-4 h-4" />
+            Publish
           </Button>
           <Button
             onClick={handlePreview}

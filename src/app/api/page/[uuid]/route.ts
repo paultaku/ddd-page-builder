@@ -52,6 +52,9 @@ export async function POST(
       ownerId: existing?.ownerId ?? ANONYMOUS_OWNER_ID,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
+      published: existing?.published ?? false,
+      publishedAt: existing?.publishedAt,
+      slug: existing?.slug,
     };
     await repo.save(page);
 

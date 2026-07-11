@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { Page } from "@/domain/page/Page";
+import { normalizePage, type Page } from "@/domain/page/Page";
 import type { PageRepository } from "@/domain/page/PageRepository";
 
 // Filesystem-backed adapter. One JSON file per page under a gitignored data dir.
@@ -31,7 +31,7 @@ export class FilePageRepository implements PageRepository {
   async findById(uuid: string): Promise<Page | null> {
     try {
       const raw = await fs.readFile(this.filePath(uuid), "utf8");
-      return JSON.parse(raw) as Page;
+      return normalizePage(JSON.parse(raw));
     } catch (err: unknown) {
       if (
         typeof err === "object" &&
@@ -52,7 +52,7 @@ export class FilePageRepository implements PageRepository {
       if (!file.endsWith(".json")) continue;
       try {
         const raw = await fs.readFile(path.join(DATA_DIR, file), "utf8");
-        const page = JSON.parse(raw) as Page;
+        const page = normalizePage(JSON.parse(raw));
         if (page.ownerId === ownerId) pages.push(page);
       } catch {
         // Skip unreadable/corrupt files rather than failing the whole listing.
