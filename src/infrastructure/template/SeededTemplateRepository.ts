@@ -39,7 +39,7 @@ const BASE_CSS = `
 
 // Seeded template catalog: one per category. `store`, `product-detail` and the
 // commerce `one-page-product` are paid (publish-gated in trial); the rest free.
-const TEMPLATES: Template[] = [
+const TEMPLATES: Omit<Template, "source">[] = [
   {
     id: "business-basic",
     name: "Business Starter",
@@ -115,17 +115,23 @@ const TEMPLATES: Template[] = [
   },
 ];
 
+const withSource = (t: Omit<Template, "source">): Template => ({
+  ...t,
+  source: "seed",
+});
+
 export class SeededTemplateRepository implements TemplateRepository {
   async findAll(): Promise<Template[]> {
-    return TEMPLATES;
+    return TEMPLATES.map(withSource);
   }
   async findById(id: string): Promise<Template | null> {
-    return TEMPLATES.find((t) => t.id === id) ?? null;
+    const found = TEMPLATES.find((t) => t.id === id);
+    return found ? withSource(found) : null;
   }
 }
 
 let repository: TemplateRepository | null = null;
-export function getTemplateRepository(): TemplateRepository {
+export function getSeededTemplateRepository(): TemplateRepository {
   if (!repository) repository = new SeededTemplateRepository();
   return repository;
 }

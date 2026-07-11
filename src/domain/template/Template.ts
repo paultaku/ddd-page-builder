@@ -12,6 +12,10 @@ export type TemplateCategory =
   | "company-landing"
   | "one-page-product";
 
+// Where a template came from: a curated in-repo seed, or one a user saved from
+// their own page (T2). User templates are owned and never publish-gated.
+export type TemplateSource = "seed" | "user";
+
 export interface Template {
   id: string;
   name: string;
@@ -19,6 +23,8 @@ export interface Template {
   // Reuse the module tier vocabulary so paid templates plug into the same
   // entitlement machine.
   tier: ModuleTier;
+  source: TemplateSource;
+  ownerId?: string;
   thumbnail?: string;
   html: string;
   css: string;

@@ -5,7 +5,7 @@ import { isPublishable } from "@/domain/module-catalog/Entitlement";
 import { templateEntitlementKey } from "@/domain/template/Template";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
 import { getModuleCatalog } from "@/infrastructure/module-catalog/moduleCatalog";
-import { getTemplateRepository } from "@/infrastructure/template/SeededTemplateRepository";
+import { getTemplateRepository } from "@/infrastructure/template/templateRepository";
 import { getEntitlementRepository } from "@/infrastructure/module-catalog/FileEntitlementRepository";
 
 export const runtime = "nodejs";
