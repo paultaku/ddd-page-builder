@@ -36,6 +36,7 @@ const CATEGORIES = [
   "company-landing",
   "one-page-product",
   "pricing",
+  "contact",
 ] as const;
 
 // Platform + user template catalog. Importing seeds the canvas and records
