@@ -35,6 +35,7 @@ const BASE_CSS = `
 .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
 .price { font-size: 1.5rem; font-weight: 700; color: #16a34a; }
 .btn-buy { display: inline-block; background-color: #16a34a; color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 700; }
+.btn { display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 700; }
 `.trim();
 
 // Seeded template catalog: one per category. `store`, `product-detail` and the
@@ -45,9 +46,16 @@ const TEMPLATES: Omit<Template, "source">[] = [
     name: "Business Starter",
     category: "business",
     tier: "free",
-    html: `<section class="container mx-auto px-4 py-16">
-  <h1 class="text-4xl font-bold text-gray-800 mb-4">Your business, online.</h1>
-  <p class="text-gray-600 mb-8">A clean starting point for a services business.</p>
+    html: `<section class="bg-gray-100 py-16 text-center">
+  <div class="container mx-auto px-4">
+    <h1 class="text-4xl font-bold text-gray-800 mb-4">Your business, online.</h1>
+    <p class="text-gray-600 mb-8">Launch a professional site for your services and store in minutes.</p>
+    <a href="#store" class="btn">Get started</a>
+  </div>
+</section>
+<section id="store" class="container mx-auto px-4 py-16">
+  <h2 class="text-3xl font-bold text-gray-800 mb-4">Our store</h2>
+  <p class="text-gray-600 mb-8">Browse our products and services — everything your customers need in one place.</p>
   <div class="grid grid-cols-3 gap-4">
     <div class="bg-white rounded-lg shadow-md p-6"><h2 class="text-xl font-bold text-gray-800 mb-2">Service one</h2><p class="text-gray-600">Describe it here.</p></div>
     <div class="bg-white rounded-lg shadow-md p-6"><h2 class="text-xl font-bold text-gray-800 mb-2">Service two</h2><p class="text-gray-600">Describe it here.</p></div>
