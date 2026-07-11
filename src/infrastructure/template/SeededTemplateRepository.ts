@@ -152,6 +152,27 @@ const TEMPLATES: Omit<Template, "source">[] = [
 </section>`,
     css: BASE_CSS,
   },
+  {
+    id: "contact-us",
+    name: "Contact Us",
+    category: "contact",
+    tier: "free",
+    html: `<section class="container mx-auto px-4 py-16">
+  <div class="text-center mb-8">
+    <h1 class="text-4xl font-bold text-gray-800 mb-4">Get in touch</h1>
+    <p class="text-gray-600">We'd love to hear from you. Send us a message.</p>
+  </div>
+  <div class="bg-white rounded-lg shadow-md p-8" style="max-width:560px;margin:0 auto">
+    <form>
+      <input type="text" placeholder="Your name" style="display:block;width:100%;box-sizing:border-box;padding:0.75rem;margin-bottom:1rem;border:1px solid #d1d5db;border-radius:0.375rem" />
+      <input type="email" placeholder="Your email" style="display:block;width:100%;box-sizing:border-box;padding:0.75rem;margin-bottom:1rem;border:1px solid #d1d5db;border-radius:0.375rem" />
+      <textarea placeholder="Your message" rows="5" style="display:block;width:100%;box-sizing:border-box;padding:0.75rem;margin-bottom:1rem;border:1px solid #d1d5db;border-radius:0.375rem"></textarea>
+      <button type="submit" class="btn" style="border:none;cursor:pointer">Send message</button>
+    </form>
+  </div>
+</section>`,
+    css: BASE_CSS,
+  },
 ];
 
 const withSource = (t: Omit<Template, "source">): Template => ({
