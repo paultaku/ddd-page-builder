@@ -11,11 +11,11 @@ interface SavePagePayload {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { uuid: string } }
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
     const body: SavePagePayload = await request.json();
-    const { uuid } = params;
+    const { uuid } = await params;
 
     // Validate the request
     if (!body.html) {

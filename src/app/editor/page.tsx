@@ -23,6 +23,9 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [pageTitle, setPageTitle] = useState("");
+  // Stable page identity: generated once, reused across saves so that saving
+  // is an update, not a fresh create. Cleared only on reset.
+  const [pageUuid, setPageUuid] = useState<string>("");
   const editorRef = useRef<EditorInstance | null>(null);
 
   // Default content for the editor
@@ -79,8 +82,12 @@ export default function EditorPage() {
     setSaveStatus("saving");
 
     try {
-      // Generate UUID for this save
-      const uuid = uuidv4();
+      // Reuse the stable page identity; only mint one the first time.
+      let uuid = pageUuid;
+      if (!uuid) {
+        uuid = uuidv4();
+        setPageUuid(uuid);
+      }
 
       // Get HTML output from GrapeJS
       const html = editor.getHtml();
@@ -113,7 +120,9 @@ export default function EditorPage() {
 
       if (response.ok && result.success) {
         setSaveStatus("saved");
-        toast.success(`Page saved successfully! UUID: ${uuid}`);
+        // Honest copy: the server endpoint does not yet persist (see A2).
+        // The only durable store right now is this browser's localStorage.
+        toast.success(`Saved to this browser. UUID: ${uuid}`);
 
         // Also save to localStorage as backup
         const localSaveData: SaveData = {
@@ -186,6 +195,7 @@ export default function EditorPage() {
       editor.setComponents(defaultComponents);
       editor.setStyle(defaultStyle);
       setPageTitle("");
+      setPageUuid("");
       localStorage.removeItem("pageEditorData");
       toast.info("Editor reset successfully");
     }
