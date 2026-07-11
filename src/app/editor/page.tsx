@@ -18,6 +18,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { ModulePanel } from "@/components/module-panel";
 import "./editor.css";
 
 export default function EditorPage() {
@@ -438,6 +439,7 @@ export default function EditorPage() {
         </div>
 
         <div className="flex gap-2">
+          <ModulePanel editor={editor} />
           <Button
             onClick={handleSave}
             variant="default"

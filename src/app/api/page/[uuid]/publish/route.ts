@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ANONYMOUS_OWNER_ID } from "@/domain/page/Page";
+import { findUsedModules } from "@/domain/module-catalog/Module";
+import { isPublishable } from "@/domain/module-catalog/Entitlement";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
+import { getModuleCatalog } from "@/infrastructure/module-catalog/moduleCatalog";
+import { getEntitlementRepository } from "@/infrastructure/module-catalog/FileEntitlementRepository";
 
 export const runtime = "nodejs";
 
@@ -24,6 +29,31 @@ export async function POST(
     }
 
     const publish = !!body.published;
+
+    // Trial gate: block publishing a page that uses any module not `granted`.
+    // Placement/preview are never gated — only this explicit publish action.
+    if (publish) {
+      const used = findUsedModules(page.html, getModuleCatalog());
+      const entitlements = getEntitlementRepository();
+      const blockedModules: Array<{ id: string; name: string }> = [];
+      for (const module of used) {
+        const state = await entitlements.getState(
+          ANONYMOUS_OWNER_ID,
+          module.id,
+          module.tier
+        );
+        if (!isPublishable(state)) {
+          blockedModules.push({ id: module.id, name: module.name });
+        }
+      }
+      if (blockedModules.length > 0) {
+        return NextResponse.json(
+          { error: "Upgrade required to publish", blockedModules },
+          { status: 403 }
+        );
+      }
+    }
+
     const now = new Date().toISOString();
     await repo.save({
       ...page,
