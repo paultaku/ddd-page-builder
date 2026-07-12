@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthWidget } from "@/components/auth-widget";
 
 // Site-wide footer with quick navigation.
 export function Footer() {
@@ -16,6 +17,7 @@ export function Footer() {
           <Link href="/contact" className="transition-colors hover:text-gray-800">
             Contact
           </Link>
+          <AuthWidget />
         </nav>
       </div>
     </footer>
