@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import {
@@ -10,6 +11,12 @@ import {
   type UserSettings,
 } from "@/lib/settings";
 
+interface RecentPage {
+  uuid: string;
+  title: string;
+  updatedAt: string;
+}
+
 // Dashboard: combines the authenticated user's account details with editable
 // settings in one place. Client-side guard (client-side session).
 export default function DashboardPage() {
@@ -17,6 +24,7 @@ export default function DashboardPage() {
   const { user, loading, logout } = useAuth();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
+  const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -29,6 +37,11 @@ export default function DashboardPage() {
         ...stored,
         displayName: stored.displayName || user.name,
       });
+      // Ten most recent pages (the API already returns them newest-first).
+      fetch("/api/pages")
+        .then((r) => r.json())
+        .then((d) => setRecentPages((d.pages ?? []).slice(0, 10)))
+        .catch(() => setRecentPages([]));
     }
   }, [loading, user, router]);
 
@@ -68,6 +81,48 @@ export default function DashboardPage() {
             Sign out
           </button>
         </div>
+
+        {/* Recent pages */}
+        <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Recent pages
+            </h2>
+            <Link
+              href="/pages"
+              className="text-sm font-medium text-blue-600 hover:underline"
+            >
+              View all pages →
+            </Link>
+          </div>
+          {recentPages.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No pages yet.{" "}
+              <Link href="/editor" className="text-blue-600 hover:underline">
+                Create one
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {recentPages.map((page) => (
+                <li key={page.uuid}>
+                  <Link
+                    href={`/editor?uuid=${page.uuid}`}
+                    className="flex items-center justify-between py-2 transition-colors hover:bg-gray-50"
+                  >
+                    <span className="truncate text-sm font-medium text-gray-800">
+                      {page.title || "Untitled Page"}
+                    </span>
+                    <span className="ml-4 shrink-0 text-xs text-gray-400">
+                      {new Date(page.updatedAt).toLocaleDateString()}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         {/* Account */}
         <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
