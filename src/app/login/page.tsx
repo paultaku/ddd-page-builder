@@ -29,7 +29,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
       login(data.user);
-      router.push("/account");
+      router.push("/dashboard");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
     } finally {

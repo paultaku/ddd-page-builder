@@ -20,7 +20,12 @@ export function AuthWidget() {
 
   return (
     <span className="flex items-center gap-2">
-      <span className="text-gray-700">{user.name}</span>
+      <Link
+        href="/dashboard"
+        className="text-gray-700 transition-colors hover:text-gray-900 hover:underline"
+      >
+        {user.name}
+      </Link>
       <button
         onClick={logout}
         className="text-gray-400 transition-colors hover:text-gray-800"
