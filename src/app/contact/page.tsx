@@ -1,34 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/i18n/use-i18n";
 
 // Standalone main-application contact page (authored directly, not rendered from
 // the seeded contact-us template). No backend yet — submit shows an inline
 // acknowledgement.
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
+  const { t } = useI18n();
 
   return (
     <main className="min-h-screen bg-gray-50">
       <section className="mx-auto max-w-2xl px-4 py-16">
         <div className="mb-8 text-center">
-          <h1 className="mb-3 text-4xl font-bold text-gray-900">Contact us</h1>
-          <p className="text-gray-600">
-            Questions, feedback, or partnership ideas? We&apos;d love to hear
-            from you.
-          </p>
+          <h1 className="mb-3 text-4xl font-bold text-gray-900">
+            {t("contact.title")}
+          </h1>
+          <p className="text-gray-600">{t("contact.subtitle")}</p>
         </div>
 
         {sent ? (
           <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
-            <p className="font-medium text-green-800">
-              Thanks — we&apos;ll be in touch shortly.
-            </p>
+            <p className="font-medium text-green-800">{t("contact.sent")}</p>
             <button
               onClick={() => setSent(false)}
               className="mt-4 text-sm font-medium text-green-700 hover:underline"
             >
-              Send another message
+              {t("contact.sendAnother")}
             </button>
           </div>
         ) : (
@@ -44,7 +43,7 @@ export default function ContactPage() {
                 htmlFor="name"
                 className="mb-1 block text-sm font-medium text-gray-700"
               >
-                Name
+                {t("contact.name")}
               </label>
               <input
                 id="name"
@@ -58,7 +57,7 @@ export default function ContactPage() {
                 htmlFor="email"
                 className="mb-1 block text-sm font-medium text-gray-700"
               >
-                Email
+                {t("contact.email")}
               </label>
               <input
                 id="email"
@@ -72,7 +71,7 @@ export default function ContactPage() {
                 htmlFor="message"
                 className="mb-1 block text-sm font-medium text-gray-700"
               >
-                Message
+                {t("contact.message")}
               </label>
               <textarea
                 id="message"
@@ -85,13 +84,13 @@ export default function ContactPage() {
               type="submit"
               className="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
             >
-              Send message
+              {t("contact.send")}
             </button>
           </form>
         )}
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          Or email us at{" "}
+          {t("contact.orEmail")}{" "}
           <a
             href="mailto:hello@example.com"
             className="text-blue-600 hover:underline"
