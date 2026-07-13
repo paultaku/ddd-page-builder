@@ -17,6 +17,9 @@ export function Footer() {
           <Link href="/contact" className="transition-colors hover:text-gray-800">
             Contact
           </Link>
+          <Link href="/media" className="transition-colors hover:text-gray-800">
+            Media
+          </Link>
           <AuthWidget />
         </nav>
       </div>
