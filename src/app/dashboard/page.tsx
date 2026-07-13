@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   DEFAULT_SETTINGS,
   readSettings,
@@ -22,6 +23,7 @@ interface RecentPage {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+  const { t } = useI18n();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
@@ -48,7 +50,7 @@ export default function DashboardPage() {
   if (loading || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center text-sm text-gray-500">
-        Loading…
+        {t("common.loading")}
       </main>
     );
   }
@@ -70,7 +72,9 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gray-50 px-4 py-12">
       <div className="mx-auto max-w-2xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("dashboard.title")}
+          </h1>
           <button
             onClick={() => {
               logout();
@@ -78,7 +82,7 @@ export default function DashboardPage() {
             }}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
           >
-            Sign out
+            {t("dashboard.signOut")}
           </button>
         </div>
 
@@ -86,20 +90,20 @@ export default function DashboardPage() {
         <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">
-              Recent pages
+              {t("dashboard.recentPages")}
             </h2>
             <Link
               href="/pages"
               className="text-sm font-medium text-blue-600 hover:underline"
             >
-              View all pages →
+              {t("dashboard.viewAll")}
             </Link>
           </div>
           {recentPages.length === 0 ? (
             <p className="text-sm text-gray-500">
-              No pages yet.{" "}
+              {t("dashboard.noPages")}{" "}
               <Link href="/editor" className="text-blue-600 hover:underline">
-                Create one
+                {t("dashboard.createOne")}
               </Link>
               .
             </p>
@@ -126,18 +130,20 @@ export default function DashboardPage() {
 
         {/* Account */}
         <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Account</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            {t("dashboard.account")}
+          </h2>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Name</dt>
+              <dt className="text-gray-500">{t("dashboard.name")}</dt>
               <dd className="font-medium text-gray-800">{user.name}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Email</dt>
+              <dt className="text-gray-500">{t("dashboard.email")}</dt>
               <dd className="font-medium text-gray-800">{user.email}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Signed in with</dt>
+              <dt className="text-gray-500">{t("dashboard.signedInWith")}</dt>
               <dd className="font-medium capitalize text-gray-800">
                 {user.provider}
               </dd>
@@ -147,14 +153,16 @@ export default function DashboardPage() {
 
         {/* Settings */}
         <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Settings</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            {t("dashboard.settings")}
+          </h2>
 
           <div className="mb-4">
             <label
               htmlFor="displayName"
               className="mb-1 block text-sm font-medium text-gray-700"
             >
-              Display name
+              {t("dashboard.displayName")}
             </label>
             <input
               id="displayName"
@@ -166,7 +174,9 @@ export default function DashboardPage() {
           </div>
 
           <label className="mb-3 flex items-center justify-between text-sm">
-            <span className="text-gray-700">Email notifications</span>
+            <span className="text-gray-700">
+              {t("dashboard.emailNotifications")}
+            </span>
             <input
               type="checkbox"
               checked={settings.emailNotifications}
@@ -176,7 +186,9 @@ export default function DashboardPage() {
           </label>
 
           <label className="mb-5 flex items-center justify-between text-sm">
-            <span className="text-gray-700">Product update emails</span>
+            <span className="text-gray-700">
+              {t("dashboard.productUpdates")}
+            </span>
             <input
               type="checkbox"
               checked={settings.productUpdates}
@@ -190,10 +202,12 @@ export default function DashboardPage() {
               onClick={onSave}
               className="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
             >
-              Save settings
+              {t("dashboard.save")}
             </button>
             {saved && (
-              <span className="text-sm text-green-600">Saved</span>
+              <span className="text-sm text-green-600">
+                {t("dashboard.saved")}
+              </span>
             )}
           </div>
         </section>

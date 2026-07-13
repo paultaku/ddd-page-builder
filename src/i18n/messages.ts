@@ -1,0 +1,133 @@
+// Lightweight i18n: flat message dictionaries per locale. English is the
+// fallback for any missing key.
+export type Locale = "en" | "zh";
+export const LOCALES: Locale[] = ["en", "zh"];
+export const DEFAULT_LOCALE: Locale = "en";
+export const LOCALE_LABELS: Record<Locale, string> = { en: "EN", zh: "中文" };
+
+type Messages = Record<string, string>;
+
+const en: Messages = {
+  "nav.home": "Home",
+  "nav.pricing": "Pricing",
+  "nav.contact": "Contact",
+  "nav.media": "Media",
+  "nav.signIn": "Sign in",
+  "nav.signOut": "Sign out",
+
+  "home.title": "Build your website, module by module",
+  "home.subtitle": "Start from a template, edit by drag-and-drop, publish in one click.",
+  "home.openEditor": "Open the editor",
+  "home.viewPricing": "View pricing",
+  "home.f1.title": "Visual editing",
+  "home.f1.desc": "Drag-and-drop editing with live preview, powered by GrapeJS.",
+  "home.f2.title": "Templates & modules",
+  "home.f2.desc": "Start from a template, add modules, and reuse your own.",
+  "home.f3.title": "Publish & share",
+  "home.f3.desc": "Publish to a hosted URL in one click, or export self-contained HTML.",
+
+  "contact.title": "Contact us",
+  "contact.subtitle":
+    "Questions, feedback, or partnership ideas? We'd love to hear from you.",
+  "contact.name": "Name",
+  "contact.email": "Email",
+  "contact.message": "Message",
+  "contact.send": "Send message",
+  "contact.sent": "Thanks — we'll be in touch shortly.",
+  "contact.sendAnother": "Send another message",
+  "contact.orEmail": "Or email us at",
+
+  "login.title": "Sign in",
+  "login.subtitle": "Mock authentication — no real accounts.",
+  "login.github": "Continue with GitHub",
+  "login.google": "Continue with Google",
+  "login.or": "or",
+  "login.email": "Email",
+  "login.password": "Password",
+  "login.signInEmail": "Sign in with email",
+  "login.demoHint": "Demo login — email:",
+
+  "dashboard.title": "Dashboard",
+  "dashboard.signOut": "Sign out",
+  "dashboard.recentPages": "Recent pages",
+  "dashboard.viewAll": "View all pages →",
+  "dashboard.noPages": "No pages yet.",
+  "dashboard.createOne": "Create one",
+  "dashboard.account": "Account",
+  "dashboard.name": "Name",
+  "dashboard.email": "Email",
+  "dashboard.signedInWith": "Signed in with",
+  "dashboard.settings": "Settings",
+  "dashboard.displayName": "Display name",
+  "dashboard.emailNotifications": "Email notifications",
+  "dashboard.productUpdates": "Product update emails",
+  "dashboard.save": "Save settings",
+  "dashboard.saved": "Saved",
+
+  "common.loading": "Loading…",
+};
+
+const zh: Messages = {
+  "nav.home": "首頁",
+  "nav.pricing": "定價",
+  "nav.contact": "聯絡我們",
+  "nav.media": "媒體庫",
+  "nav.signIn": "登入",
+  "nav.signOut": "登出",
+
+  "home.title": "一個模組一個模組，打造你的網站",
+  "home.subtitle": "從樣板開始，拖拉編輯，一鍵發布。",
+  "home.openEditor": "開啟編輯器",
+  "home.viewPricing": "查看定價",
+  "home.f1.title": "視覺化編輯",
+  "home.f1.desc": "基於 GrapeJS 的拖拉式編輯與即時預覽。",
+  "home.f2.title": "樣板與模組",
+  "home.f2.desc": "從樣板開始，加購模組，也能重用自己的樣板。",
+  "home.f3.title": "發布與分享",
+  "home.f3.desc": "一鍵發布到託管網址，或匯出自足的 HTML。",
+
+  "contact.title": "聯絡我們",
+  "contact.subtitle": "有問題、建議或合作想法嗎？我們很樂意聽見你的聲音。",
+  "contact.name": "姓名",
+  "contact.email": "電子郵件",
+  "contact.message": "訊息",
+  "contact.send": "送出訊息",
+  "contact.sent": "感謝——我們會盡快與你聯繫。",
+  "contact.sendAnother": "再送一則訊息",
+  "contact.orEmail": "或寄信到",
+
+  "login.title": "登入",
+  "login.subtitle": "模擬驗證——沒有真實帳號。",
+  "login.github": "使用 GitHub 登入",
+  "login.google": "使用 Google 登入",
+  "login.or": "或",
+  "login.email": "電子郵件",
+  "login.password": "密碼",
+  "login.signInEmail": "以電子郵件登入",
+  "login.demoHint": "示範登入 — 電子郵件：",
+
+  "dashboard.title": "儀表板",
+  "dashboard.signOut": "登出",
+  "dashboard.recentPages": "最近的頁面",
+  "dashboard.viewAll": "查看所有頁面 →",
+  "dashboard.noPages": "尚無頁面。",
+  "dashboard.createOne": "建立一個",
+  "dashboard.account": "帳號",
+  "dashboard.name": "姓名",
+  "dashboard.email": "電子郵件",
+  "dashboard.signedInWith": "登入方式",
+  "dashboard.settings": "設定",
+  "dashboard.displayName": "顯示名稱",
+  "dashboard.emailNotifications": "電子郵件通知",
+  "dashboard.productUpdates": "產品更新郵件",
+  "dashboard.save": "儲存設定",
+  "dashboard.saved": "已儲存",
+
+  "common.loading": "載入中…",
+};
+
+export const MESSAGES: Record<Locale, Messages> = { en, zh };
+
+export function translate(locale: Locale, key: string): string {
+  return MESSAGES[locale]?.[key] ?? MESSAGES[DEFAULT_LOCALE][key] ?? key;
+}
