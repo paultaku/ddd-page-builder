@@ -434,6 +434,15 @@ export default function EditorPage() {
             Sites
           </Link>
 
+          <a
+            href="/media"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            Media Library
+          </a>
+
           {/* Page Title Input */}
           <div className="flex items-center gap-2">
             <label
