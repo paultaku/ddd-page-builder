@@ -421,17 +421,10 @@ export default function EditorPage() {
           <h1 className="text-xl font-semibold text-gray-800">Page Editor</h1>
 
           <Link
-            href="/pages"
+            href="/dashboard"
             className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
           >
-            My Pages
-          </Link>
-
-          <Link
-            href="/sites"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-          >
-            Sites
+            Dashboard
           </Link>
 
           <a
