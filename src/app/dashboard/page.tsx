@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { useI18n } from "@/i18n/use-i18n";
+import { CreateSiteForm } from "@/components/create-site-form";
 import {
   DEFAULT_SETTINGS,
   readSettings,
@@ -12,9 +13,16 @@ import {
   type UserSettings,
 } from "@/lib/settings";
 
-interface RecentPage {
+interface PageSummary {
   uuid: string;
   title: string;
+  updatedAt: string;
+}
+
+interface SiteSummary {
+  id: string;
+  name: string;
+  pageCount: number;
   updatedAt: string;
 }
 
@@ -26,7 +34,8 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
-  const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
+  const [pages, setPages] = useState<PageSummary[]>([]);
+  const [sites, setSites] = useState<SiteSummary[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -39,11 +48,15 @@ export default function DashboardPage() {
         ...stored,
         displayName: stored.displayName || user.name,
       });
-      // Ten most recent pages (the API already returns them newest-first).
+      // My Pages + My Sites (both APIs return newest-first).
       fetch("/api/pages")
         .then((r) => r.json())
-        .then((d) => setRecentPages((d.pages ?? []).slice(0, 10)))
-        .catch(() => setRecentPages([]));
+        .then((d) => setPages(d.pages ?? []))
+        .catch(() => setPages([]));
+      fetch("/api/sites")
+        .then((r) => r.json())
+        .then((d) => setSites(d.sites ?? []))
+        .catch(() => setSites([]));
     }
   }, [loading, user, router]);
 
@@ -86,20 +99,20 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Recent pages */}
+        {/* My Pages */}
         <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">
-              {t("dashboard.recentPages")}
+              {t("dashboard.myPages")}
             </h2>
             <Link
-              href="/pages"
+              href="/editor"
               className="text-sm font-medium text-blue-600 hover:underline"
             >
-              {t("dashboard.viewAll")}
+              + {t("dashboard.newPage")}
             </Link>
           </div>
-          {recentPages.length === 0 ? (
+          {pages.length === 0 ? (
             <p className="text-sm text-gray-500">
               {t("dashboard.noPages")}{" "}
               <Link href="/editor" className="text-blue-600 hover:underline">
@@ -108,8 +121,8 @@ export default function DashboardPage() {
               .
             </p>
           ) : (
-            <ul className="divide-y divide-gray-100">
-              {recentPages.map((page) => (
+            <ul className="max-h-72 divide-y divide-gray-100 overflow-y-auto">
+              {pages.map((page) => (
                 <li key={page.uuid}>
                   <Link
                     href={`/editor?uuid=${page.uuid}`}
@@ -126,6 +139,43 @@ export default function DashboardPage() {
               ))}
             </ul>
           )}
+        </section>
+
+        {/* My Sites */}
+        <section className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            {t("dashboard.mySites")}
+          </h2>
+          {sites.length === 0 ? (
+            <p className="mb-4 text-sm text-gray-500">
+              {t("dashboard.noSites")}
+            </p>
+          ) : (
+            <ul className="mb-4 divide-y divide-gray-100">
+              {sites.map((site) => (
+                <li
+                  key={site.id}
+                  className="flex items-center justify-between py-2"
+                >
+                  <span className="min-w-0 truncate text-sm font-medium text-gray-800">
+                    {site.name}{" "}
+                    <span className="text-xs text-gray-400">
+                      ({site.pageCount})
+                    </span>
+                  </span>
+                  <a
+                    href={`/s/${site.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-4 shrink-0 text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    {t("dashboard.viewSite")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+          <CreateSiteForm />
         </section>
 
         {/* Account */}
