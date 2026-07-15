@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { ANONYMOUS_OWNER_ID, type Page } from "@/domain/page/Page";
 import type { Site } from "@/domain/site/Site";
+import { DEFAULT_PALETTE } from "@/domain/site/ColorPalette";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
 import { getTemplateRepository } from "@/infrastructure/template/templateRepository";
 import { getSiteRepository } from "@/infrastructure/site/FileSiteRepository";
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
       ownerId: ANONYMOUS_OWNER_ID,
       templateId: template.id,
       pageIds,
+      colorPalette: DEFAULT_PALETTE,
       createdAt: now,
       updatedAt: now,
       published: false,
@@ -83,6 +85,7 @@ export async function GET() {
         id: s.id,
         name: s.name,
         pageCount: s.pageIds.length,
+        colorPalette: s.colorPalette,
         updatedAt: s.updatedAt,
       })),
     });

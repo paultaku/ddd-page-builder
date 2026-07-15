@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
 import { getSiteRepository } from "@/infrastructure/site/FileSiteRepository";
+import {
+  normalizePalette,
+  type ColorPalette,
+} from "@/domain/site/ColorPalette";
 
 export const runtime = "nodejs";
 
@@ -30,6 +34,49 @@ export async function GET(
     return NextResponse.json({ site, pages });
   } catch (error) {
     console.error("Error loading site:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+interface UpdateSitePayload {
+  name?: string;
+  colorPalette?: Partial<ColorPalette>;
+}
+
+// Update project-level fields: the theme color palette and/or the name. The
+// palette is normalized (hex-sanitized) before persistence; assigned pages then
+// delegate to the new values on their next render.
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const repo = getSiteRepository();
+    const site = await repo.findById(id);
+    if (!site) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+    }
+    const body: UpdateSitePayload = await request.json();
+
+    if (typeof body.name === "string") {
+      const name = body.name.trim();
+      if (name) site.name = name;
+    }
+    if (body.colorPalette) {
+      site.colorPalette = normalizePalette({
+        ...site.colorPalette,
+        ...body.colorPalette,
+      });
+    }
+    site.updatedAt = new Date().toISOString();
+    const saved = await repo.save(site);
+    return NextResponse.json({ site: saved });
+  } catch (error) {
+    console.error("Error updating site:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

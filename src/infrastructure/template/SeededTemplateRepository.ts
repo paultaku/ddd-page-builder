@@ -33,9 +33,9 @@ const BASE_CSS = `
 .gap-4 { gap: 1rem; }
 .grid { display: grid; }
 .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
-.price { font-size: 1.5rem; font-weight: 700; color: #16a34a; }
-.btn-buy { display: inline-block; background-color: #16a34a; color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 700; }
-.btn { display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 700; }
+.price { font-size: 1.5rem; font-weight: 700; color: var(--color-accent, #16a34a); }
+.btn-buy { display: inline-block; background-color: var(--color-accent, #16a34a); color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 700; }
+.btn { display: inline-block; background-color: var(--color-primary, #3b82f6); color: #ffffff; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 700; }
 `.trim();
 
 // Seeded template catalog: one per category. `store`, `product-detail` and the
