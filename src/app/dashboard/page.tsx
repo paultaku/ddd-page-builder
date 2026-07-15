@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { useI18n } from "@/i18n/use-i18n";
 import { CreateSiteForm } from "@/components/create-site-form";
+import { SitePaletteEditor } from "@/components/site-palette-editor";
+import type { ColorPalette } from "@/domain/site/ColorPalette";
 import {
   DEFAULT_SETTINGS,
   readSettings,
@@ -17,12 +19,14 @@ interface PageSummary {
   uuid: string;
   title: string;
   updatedAt: string;
+  projectId: string | null;
 }
 
 interface SiteSummary {
   id: string;
   name: string;
   pageCount: number;
+  colorPalette: ColorPalette;
   updatedAt: string;
 }
 
@@ -48,17 +52,33 @@ export default function DashboardPage() {
         ...stored,
         displayName: stored.displayName || user.name,
       });
-      // My Pages + My Sites (both APIs return newest-first).
-      fetch("/api/pages")
-        .then((r) => r.json())
-        .then((d) => setPages(d.pages ?? []))
-        .catch(() => setPages([]));
-      fetch("/api/sites")
-        .then((r) => r.json())
-        .then((d) => setSites(d.sites ?? []))
-        .catch(() => setSites([]));
+      loadPages();
+      loadSites();
     }
   }, [loading, user, router]);
+
+  // My Pages + My Sites (both APIs return newest-first).
+  const loadPages = () =>
+    fetch("/api/pages")
+      .then((r) => r.json())
+      .then((d) => setPages(d.pages ?? []))
+      .catch(() => setPages([]));
+  const loadSites = () =>
+    fetch("/api/sites")
+      .then((r) => r.json())
+      .then((d) => setSites(d.sites ?? []))
+      .catch(() => setSites([]));
+
+  // Assign a page to a project (or detach with ""). Single-project membership is
+  // enforced server-side; refresh both lists so counts and selection stay true.
+  const assignProject = async (uuid: string, siteId: string) => {
+    await fetch(`/api/page/${uuid}/project`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ siteId: siteId || null }),
+    }).catch(() => {});
+    await Promise.all([loadPages(), loadSites()]);
+  };
 
   if (loading || !user) {
     return (
@@ -121,20 +141,36 @@ export default function DashboardPage() {
               .
             </p>
           ) : (
-            <ul className="max-h-72 divide-y divide-gray-100 overflow-y-auto">
+            <ul className="max-h-96 divide-y divide-gray-100 overflow-y-auto">
               {pages.map((page) => (
-                <li key={page.uuid}>
+                <li
+                  key={page.uuid}
+                  className="flex items-center justify-between gap-3 py-2"
+                >
                   <Link
                     href={`/editor?uuid=${page.uuid}`}
-                    className="flex items-center justify-between py-2 transition-colors hover:bg-gray-50"
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 transition-colors hover:bg-gray-50"
                   >
                     <span className="truncate text-sm font-medium text-gray-800">
                       {page.title || "Untitled Page"}
                     </span>
-                    <span className="ml-4 shrink-0 text-xs text-gray-400">
+                    <span className="shrink-0 text-xs text-gray-400">
                       {new Date(page.updatedAt).toLocaleDateString()}
                     </span>
                   </Link>
+                  <select
+                    value={page.projectId ?? ""}
+                    onChange={(e) => assignProject(page.uuid, e.target.value)}
+                    aria-label={t("dashboard.project")}
+                    className="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                  >
+                    <option value="">{t("dashboard.noProject")}</option>
+                    {sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                      </option>
+                    ))}
+                  </select>
                 </li>
               ))}
             </ul>
@@ -153,24 +189,27 @@ export default function DashboardPage() {
           ) : (
             <ul className="mb-4 divide-y divide-gray-100">
               {sites.map((site) => (
-                <li
-                  key={site.id}
-                  className="flex items-center justify-between py-2"
-                >
-                  <span className="min-w-0 truncate text-sm font-medium text-gray-800">
-                    {site.name}{" "}
-                    <span className="text-xs text-gray-400">
-                      ({site.pageCount})
+                <li key={site.id} className="py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="min-w-0 truncate text-sm font-medium text-gray-800">
+                      {site.name}{" "}
+                      <span className="text-xs text-gray-400">
+                        ({site.pageCount})
+                      </span>
                     </span>
-                  </span>
-                  <a
-                    href={`/s/${site.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-4 shrink-0 text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {t("dashboard.viewSite")}
-                  </a>
+                    <a
+                      href={`/s/${site.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-4 shrink-0 text-sm font-medium text-blue-600 hover:underline"
+                    >
+                      {t("dashboard.viewSite")}
+                    </a>
+                  </div>
+                  <SitePaletteEditor
+                    siteId={site.id}
+                    initial={site.colorPalette}
+                  />
                 </li>
               ))}
             </ul>

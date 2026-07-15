@@ -42,6 +42,16 @@ export class FileSiteRepository implements SiteRepository {
   }
 
   async listByOwner(ownerId: string): Promise<Site[]> {
+    return (await this.readAll()).filter((s) => s.ownerId === ownerId);
+  }
+
+  async findByPageId(pageId: string): Promise<Site | null> {
+    const sites = await this.readAll();
+    return sites.find((s) => s.pageIds.includes(pageId)) ?? null;
+  }
+
+  // Load every stored site, newest-first. Corrupt files are skipped.
+  private async readAll(): Promise<Site[]> {
     await this.ensureDir();
     const files = await fs.readdir(DATA_DIR);
     const sites: Site[] = [];
@@ -49,8 +59,7 @@ export class FileSiteRepository implements SiteRepository {
       if (!file.endsWith(".json")) continue;
       try {
         const raw = await fs.readFile(path.join(DATA_DIR, file), "utf8");
-        const site = normalizeSite(JSON.parse(raw));
-        if (site.ownerId === ownerId) sites.push(site);
+        sites.push(normalizeSite(JSON.parse(raw)));
       } catch {
         // Skip corrupt files.
       }

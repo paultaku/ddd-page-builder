@@ -68,6 +68,18 @@ const en: Messages = {
   "dashboard.productUpdates": "Product update emails",
   "dashboard.save": "Save settings",
   "dashboard.saved": "Saved",
+  "dashboard.project": "Project",
+  "dashboard.noProject": "No project",
+  "dashboard.themePalette": "Theme palette",
+  "dashboard.savePalette": "Save palette",
+  "dashboard.paletteSaved": "Palette saved",
+  "dashboard.paletteSaveFailed": "Failed to save palette",
+
+  "palette.primary": "Primary",
+  "palette.secondary": "Secondary",
+  "palette.accent": "Accent",
+  "palette.background": "Background",
+  "palette.text": "Text",
 
   "common.loading": "Loading…",
 };
@@ -132,6 +144,18 @@ const zh: Messages = {
   "dashboard.productUpdates": "產品更新郵件",
   "dashboard.save": "儲存設定",
   "dashboard.saved": "已儲存",
+  "dashboard.project": "專案",
+  "dashboard.noProject": "無專案",
+  "dashboard.themePalette": "主題色盤",
+  "dashboard.savePalette": "儲存色盤",
+  "dashboard.paletteSaved": "色盤已儲存",
+  "dashboard.paletteSaveFailed": "色盤儲存失敗",
+
+  "palette.primary": "主色",
+  "palette.secondary": "次要色",
+  "palette.accent": "強調色",
+  "palette.background": "背景",
+  "palette.text": "文字",
 
   "common.loading": "載入中…",
 };

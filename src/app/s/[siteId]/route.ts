@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPageRepository } from "@/infrastructure/page/FilePageRepository";
 import { getSiteRepository } from "@/infrastructure/site/FileSiteRepository";
+import { paletteToCssVars } from "@/domain/site/ColorPalette";
 
 export const runtime = "nodejs";
 
@@ -49,11 +50,12 @@ export async function GET(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(site.name)}</title>
 <style>
-body { margin: 0; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 640px; margin: 0 auto; }
-h1 { color: #1f2937; }
+${paletteToCssVars(site.colorPalette)}
+body { margin: 0; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 640px; margin: 0 auto; color: var(--color-text, #1f2937); }
+h1 { color: var(--color-text, #1f2937); }
 ul { list-style: none; padding: 0; }
 li { padding: 0.75rem 0; border-bottom: 1px solid #e5e7eb; }
-a { color: #2563eb; text-decoration: none; }
+a { color: var(--color-primary, #2563eb); text-decoration: none; }
 a:hover { text-decoration: underline; }
 </style>
 </head>
