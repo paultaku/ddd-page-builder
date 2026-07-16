@@ -4,7 +4,16 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, Eye, RotateCcw, Download, Upload, Rocket } from "lucide-react";
+import {
+  Save,
+  Eye,
+  RotateCcw,
+  Download,
+  Upload,
+  Rocket,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import StudioEditor from "@grapesjs/studio-sdk/react";
 import "@grapesjs/studio-sdk/style";
 import {
@@ -23,6 +32,25 @@ import { TemplatePanel } from "@/components/template-panel";
 import { injectPurchaseUrl } from "@/lib/purchaseLink";
 import "./editor.css";
 
+// A labeled cluster of related toolbar controls. The uppercase caption makes the
+// "grouped by purpose" structure legible at a glance.
+function ToolGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
 export default function EditorPage() {
   const [editor, setEditor] = useState<EditorInstance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +64,25 @@ export default function EditorPage() {
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   // Commerce (T4): outbound purchase link injected into the page's buy CTA.
   const [purchaseUrl, setPurchaseUrl] = useState<string>("");
+  // Collapsible action toolbar: the grouped second row can be hidden to give the
+  // canvas more height. Persisted so the choice survives reloads.
+  const [actionsCollapsed, setActionsCollapsed] = useState(false);
   const editorRef = useRef<EditorInstance | null>(null);
+
+  // Restore the toolbar collapse preference on mount.
+  useEffect(() => {
+    setActionsCollapsed(
+      localStorage.getItem("editorActionsCollapsed") === "1"
+    );
+  }, []);
+
+  const toggleActions = () => {
+    setActionsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("editorActionsCollapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   // Default content for the editor
   const defaultComponents = `
@@ -415,32 +461,38 @@ export default function EditorPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold text-gray-800">Page Editor</h1>
+      {/* Nav row — always visible: identity, navigation, page title, primary
+          actions, and the toggle for the collapsible action row. */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-4 min-w-0">
+          <h1 className="text-lg font-semibold text-gray-800 shrink-0">
+            Page Editor
+          </h1>
 
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-          >
-            Dashboard
-          </Link>
+          <nav className="flex items-center gap-3 shrink-0">
+            <Link
+              href="/dashboard"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              Dashboard
+            </Link>
+            <a
+              href="/media"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              Media Library
+            </a>
+          </nav>
 
-          <a
-            href="/media"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-          >
-            Media Library
-          </a>
+          <div className="h-5 w-px bg-gray-200 shrink-0" aria-hidden="true" />
 
           {/* Page Title Input */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <label
               htmlFor="pageTitle"
-              className="text-sm font-medium text-gray-700"
+              className="text-sm font-medium text-gray-700 shrink-0"
             >
               Page Title:
             </label>
@@ -450,46 +502,23 @@ export default function EditorPage() {
               placeholder="Enter page title..."
               value={pageTitle}
               onChange={(e) => setPageTitle(e.target.value)}
-              className="w-64"
-            />
-          </div>
-
-          {/* Purchase link (T4) — injected into the page's buy CTA on render */}
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="purchaseUrl"
-              className="text-sm font-medium text-gray-700"
-            >
-              Purchase link:
-            </label>
-            <Input
-              id="purchaseUrl"
-              type="url"
-              placeholder="https://…/buy"
-              value={purchaseUrl}
-              onChange={(e) => setPurchaseUrl(e.target.value)}
               className="w-56"
             />
           </div>
 
           {/* Save Status */}
           {saveStatus === "saving" && (
-            <span className="text-sm text-blue-600">Saving...</span>
+            <span className="text-sm text-blue-600 shrink-0">Saving...</span>
           )}
           {saveStatus === "saved" && (
-            <span className="text-sm text-green-600">Saved</span>
+            <span className="text-sm text-green-600 shrink-0">Saved</span>
           )}
           {saveStatus === "error" && (
-            <span className="text-sm text-red-600">Save failed</span>
+            <span className="text-sm text-red-600 shrink-0">Save failed</span>
           )}
         </div>
 
-        <div className="flex gap-2">
-          <TemplatePanel
-            editor={editor}
-            onTemplateApplied={(id) => setTemplateId(id)}
-          />
-          <ModulePanel editor={editor} />
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             onClick={handleSave}
             variant="default"
@@ -508,40 +537,105 @@ export default function EditorPage() {
             <Rocket className="w-4 h-4" />
             Publish
           </Button>
+          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
           <Button
-            onClick={handlePreview}
-            variant="outline"
-            className="flex items-center gap-2"
+            onClick={toggleActions}
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-1 text-gray-600"
+            aria-expanded={!actionsCollapsed}
+            aria-controls="editor-action-bar"
+            title={actionsCollapsed ? "Show tools" : "Hide tools"}
           >
-            <Eye className="w-4 h-4" />
-            Preview
-          </Button>
-          <Button
-            onClick={handleExport}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-          <Button
-            onClick={handleImport}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </Button>
-          <Button
-            onClick={handleReset}
-            variant="destructive"
-            className="flex items-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset
+            {actionsCollapsed ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
+            Tools
           </Button>
         </div>
       </div>
+
+      {/* Collapsible action row — controls grouped by purpose. */}
+      {!actionsCollapsed && (
+        <div
+          id="editor-action-bar"
+          className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center gap-4 flex-wrap"
+        >
+          <ToolGroup label="Insert">
+            <TemplatePanel
+              editor={editor}
+              onTemplateApplied={(id) => setTemplateId(id)}
+            />
+            <ModulePanel editor={editor} />
+          </ToolGroup>
+
+          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
+
+          <ToolGroup label="Page">
+            <div className="flex items-center gap-2">
+              <label htmlFor="purchaseUrl" className="sr-only">
+                Purchase link
+              </label>
+              <Input
+                id="purchaseUrl"
+                type="url"
+                placeholder="Purchase link https://…/buy"
+                value={purchaseUrl}
+                onChange={(e) => setPurchaseUrl(e.target.value)}
+                className="w-56"
+              />
+            </div>
+          </ToolGroup>
+
+          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
+
+          <ToolGroup label="Share">
+            <Button
+              onClick={handlePreview}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Preview
+            </Button>
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+            <Button
+              onClick={handleImport}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
+          </ToolGroup>
+
+          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
+
+          <ToolGroup label="Danger">
+            <Button
+              onClick={handleReset}
+              variant="destructive"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </Button>
+          </ToolGroup>
+        </div>
+      )}
 
       {/* Editor container */}
       <div className="flex-1 overflow-hidden">
