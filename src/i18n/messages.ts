@@ -26,6 +26,18 @@ const en: Messages = {
   "home.f3.title": "Publish & share",
   "home.f3.desc": "Publish to a hosted URL in one click, or export self-contained HTML.",
 
+  "home.reel.eyebrow": "One builder, every kind of site",
+  "home.reel.pause": "Pause the showcase",
+  "home.reel.play": "Play the showcase",
+  "home.reel.show": "Show",
+  "home.reel.caption.business-basic": "A business site",
+  "home.reel.caption.store-grid": "An online store",
+  "home.reel.caption.product-detail": "A product page",
+  "home.reel.caption.company-landing": "A company landing page",
+  "home.reel.caption.one-page-product": "A one-page product site",
+  "home.reel.caption.pricing-page": "A pricing page",
+  "home.reel.caption.contact-us": "A contact page",
+
   "contact.title": "Contact us",
   "contact.subtitle":
     "Questions, feedback, or partnership ideas? We'd love to hear from you.",
@@ -102,6 +114,18 @@ const zh: Messages = {
   "home.f2.desc": "從樣板開始，加購模組，也能重用自己的樣板。",
   "home.f3.title": "發布與分享",
   "home.f3.desc": "一鍵發布到託管網址，或匯出自足的 HTML。",
+
+  "home.reel.eyebrow": "一個建站工具，做出各種網站",
+  "home.reel.pause": "暫停展示",
+  "home.reel.play": "播放展示",
+  "home.reel.show": "顯示",
+  "home.reel.caption.business-basic": "商務網站",
+  "home.reel.caption.store-grid": "線上商店",
+  "home.reel.caption.product-detail": "商品頁",
+  "home.reel.caption.company-landing": "公司形象頁",
+  "home.reel.caption.one-page-product": "單頁產品網站",
+  "home.reel.caption.pricing-page": "定價頁",
+  "home.reel.caption.contact-us": "聯絡頁",
 
   "contact.title": "聯絡我們",
   "contact.subtitle": "有問題、建議或合作想法嗎？我們很樂意聽見你的聲音。",
