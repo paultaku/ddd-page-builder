@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import {
   Rocket,
   ChevronUp,
   ChevronDown,
+  Layout,
+  Code2,
 } from "lucide-react";
 import StudioEditor from "@grapesjs/studio-sdk/react";
 import "@grapesjs/studio-sdk/style";
@@ -31,6 +34,24 @@ import { ModulePanel } from "@/components/module-panel";
 import { TemplatePanel } from "@/components/template-panel";
 import { injectPurchaseUrl } from "@/lib/purchaseLink";
 import "./editor.css";
+
+// Which editing surface is active. "visual" = the GrapeJS canvas; "code" = raw
+// HTML/CSS editing with a live preview.
+type EditorMode = "visual" | "code";
+
+// CodeMode carries CodeMirror, which touches document/window and must not run
+// at prerender — hence `ssr: false`. Loading it dynamically also keeps the
+// CodeMirror bundle in a lazily-fetched chunk instead of /editor's initial
+// First Load JS, so the route stays statically prerenderable and lean.
+const CodeMode = dynamic(
+  () => import("@/components/editor/code-mode").then((m) => m.CodeMode),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-4 text-sm text-gray-400">Loading code editor…</div>
+    ),
+  }
+);
 
 // A labeled cluster of related toolbar controls. The uppercase caption makes the
 // "grouped by purpose" structure legible at a glance.
@@ -67,7 +88,15 @@ export default function EditorPage() {
   // Collapsible action toolbar: the grouped second row can be hidden to give the
   // canvas more height. Persisted so the choice survives reloads.
   const [actionsCollapsed, setActionsCollapsed] = useState(false);
+  // Active editing surface. "code" holds its own HTML/CSS buffers, edited
+  // directly and rendered verbatim in the preview (no GrapeJS normalization).
+  const [mode, setMode] = useState<EditorMode>("visual");
+  const [codeHtml, setCodeHtml] = useState("");
+  const [codeCss, setCodeCss] = useState("");
   const editorRef = useRef<EditorInstance | null>(null);
+  // Guards the one-time seeding of the code buffers when the session is
+  // restored directly into code mode (see the seed effect below).
+  const codeSeededRef = useRef(false);
 
   // Restore the toolbar collapse preference on mount.
   useEffect(() => {
@@ -76,12 +105,72 @@ export default function EditorPage() {
     );
   }, []);
 
+  // Restore the editor mode preference on mount (mirrors actionsCollapsed).
+  // Defaults to "visual" when nothing is stored.
+  useEffect(() => {
+    const saved = localStorage.getItem("editorMode");
+    if (saved === "code" || saved === "visual") {
+      setMode(saved);
+    }
+  }, []);
+
+  // If the session was restored directly into code mode, the code buffers start
+  // empty. Seed them once from the editor after it has initialized (and after
+  // any ?uuid= page has loaded, best-effort) so the preview isn't blank. Runs a
+  // single time; user edits afterward are never clobbered.
+  useEffect(() => {
+    if (mode === "code" && editor && !codeSeededRef.current) {
+      codeSeededRef.current = true;
+      setCodeHtml(editor.getHtml());
+      setCodeCss(editor.getCss());
+    }
+  }, [mode, editor]);
+
   const toggleActions = () => {
     setActionsCollapsed((prev) => {
       const next = !prev;
       localStorage.setItem("editorActionsCollapsed", next ? "1" : "0");
       return next;
     });
+  };
+
+  // Switch editing surface, carrying content across in both directions.
+  const switchMode = (next: EditorMode) => {
+    if (next === mode) return;
+    if (next === "code") {
+      // Visual -> Code: snapshot the canvas into the code buffers so code mode
+      // opens on the current page.
+      if (editor) {
+        setCodeHtml(editor.getHtml());
+        setCodeCss(editor.getCss());
+      }
+      // Any subsequent mount-restore seeding is now moot.
+      codeSeededRef.current = true;
+    } else {
+      // Code -> Visual: push the edited code back into the canvas.
+      //
+      // INTENTIONAL LOSSY ROUND-TRIP (accepted trade-off, plan §2.2): GrapeJS
+      // re-parses and normalizes on setComponents/setStyle — it may add wrapper
+      // nodes, reorder attributes, and drop markup it doesn't recognize. A
+      // Visual -> Code -> Visual trip is therefore NOT guaranteed byte-identical.
+      // This is a deliberate design decision, not a bug: the shared {html, css}
+      // is the source of truth and GrapeJS re-normalizes on re-entry.
+      if (editor) {
+        editor.setComponents(codeHtml);
+        editor.setStyle(codeCss);
+      }
+    }
+    setMode(next);
+    localStorage.setItem("editorMode", next);
+  };
+
+  // The current page content regardless of which surface is active. THIS is the
+  // decoupling that lets Save/Publish/Preview/Export persist whatever the active
+  // mode shows, instead of always reading the GrapeJS canvas.
+  const getCurrentContent = (): { html: string; css: string } => {
+    if (mode === "code") return { html: codeHtml, css: codeCss };
+    if (editor) return { html: editor.getHtml(), css: editor.getCss() };
+    return { html: "", css: "" };
   };
 
   // Default content for the editor
@@ -145,9 +234,9 @@ export default function EditorPage() {
         setPageUuid(uuid);
       }
 
-      // Get HTML + compiled CSS from GrapeJS
-      const html = editor.getHtml();
-      const css = editor.getCss();
+      // Source content from the active mode (code buffers in code mode,
+      // GrapeJS canvas in visual mode) — not from `editor` directly.
+      const { html, css } = getCurrentContent();
 
       // Create save data with metadata
       const saveData: PageSaveData = {
@@ -184,10 +273,11 @@ export default function EditorPage() {
         // be reopened via /editor?uuid=... or from the My Pages list.
         toast.success(`Page saved. UUID: ${uuid}`);
 
-        // Also save to localStorage as backup
+        // Also save to localStorage as backup. html/css reflect the active mode;
+        // components/styles are GrapeJS's structured backup of the canvas.
         const localSaveData: SaveData = {
           html,
-          css: editor.getCss(),
+          css,
           components: editor.getComponents().toJSON(),
           styles: editor.getStyle().toJSON(),
           timestamp: new Date().toISOString(),
@@ -230,13 +320,15 @@ export default function EditorPage() {
     setIsLoading(true);
     try {
       // Persist current content first so the published page is up to date.
+      // Source from the active mode, not the GrapeJS canvas directly.
+      const { html, css } = getCurrentContent();
       const saveResponse = await fetch(`/api/page/${uuid}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           uuid,
-          html: editor.getHtml(),
-          css: editor.getCss(),
+          html,
+          css,
           templateId,
           purchaseUrl,
           metadata: { pageTitle: pageTitle || "Untitled Page" },
@@ -289,10 +381,8 @@ export default function EditorPage() {
 
   // Preview functionality - opens page in new window
   const handlePreview = () => {
-    if (!editor) return;
-
-    const html = editor.getHtml();
-    const css = editor.getCss();
+    // Preview whatever the active mode currently shows.
+    const { html, css } = getCurrentContent();
 
     const previewWindow = window.open("", "_blank");
     if (previewWindow) {
@@ -339,10 +429,8 @@ export default function EditorPage() {
 
   // Export functionality - downloads page as HTML file
   const handleExport = () => {
-    if (!editor) return;
-
-    const html = editor.getHtml();
-    const css = editor.getCss();
+    // Export whatever the active mode currently shows.
+    const { html, css } = getCurrentContent();
 
     const fullHtml = `
 <!DOCTYPE html>
@@ -519,6 +607,42 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Editing surface switch: Visual (GrapeJS) vs Code (HTML+CSS). */}
+          <div
+            role="tablist"
+            aria-label="Editor mode"
+            className="flex items-center rounded-md border border-gray-200 bg-gray-50 p-0.5"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "visual"}
+              onClick={() => switchMode("visual")}
+              className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 ${
+                mode === "visual"
+                  ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <Layout className="h-3.5 w-3.5" />
+              Visual
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "code"}
+              onClick={() => switchMode("code")}
+              className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 ${
+                mode === "code"
+                  ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <Code2 className="h-3.5 w-3.5" />
+              Code
+            </button>
+          </div>
+          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
           <Button
             onClick={handleSave}
             variant="default"
@@ -564,11 +688,26 @@ export default function EditorPage() {
           className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center gap-4 flex-wrap"
         >
           <ToolGroup label="Insert">
-            <TemplatePanel
-              editor={editor}
-              onTemplateApplied={(id) => setTemplateId(id)}
-            />
-            <ModulePanel editor={editor} />
+            {/* Insert writes to the GrapeJS canvas (editor.setComponents), which
+                has no meaning against the code buffers — disable it in code mode
+                to prevent silent canvas/code divergence. */}
+            <div
+              className={`flex items-center gap-2 ${
+                mode === "code" ? "pointer-events-none opacity-50" : ""
+              }`}
+              aria-disabled={mode === "code"}
+              title={
+                mode === "code"
+                  ? "Switch to Visual to insert templates or modules"
+                  : undefined
+              }
+            >
+              <TemplatePanel
+                editor={editor}
+                onTemplateApplied={(id) => setTemplateId(id)}
+              />
+              <ModulePanel editor={editor} />
+            </div>
           </ToolGroup>
 
           <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
@@ -639,7 +778,22 @@ export default function EditorPage() {
 
       {/* Editor container */}
       <div className="flex-1 overflow-hidden">
-        <StudioEditor onEditor={handleEditorInit} />
+        {/* GrapeJS stays MOUNTED (only visually hidden) in code mode. Unmounting
+            would destroy the instance and re-run handleEditorInit on remount,
+            which re-reads ?uuid= and re-fetches/resets the page. Keeping it
+            mounted preserves the instance, its content, and undo history. */}
+        <div className={mode === "visual" ? "h-full" : "hidden"}>
+          <StudioEditor onEditor={handleEditorInit} />
+        </div>
+        {mode === "code" && (
+          <CodeMode
+            html={codeHtml}
+            css={codeCss}
+            onHtmlChange={setCodeHtml}
+            onCssChange={setCodeCss}
+            purchaseUrl={purchaseUrl}
+          />
+        )}
       </div>
 
       {/* Toast notifications */}
