@@ -5,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Blocks } from "lucide-react";
 import { toast } from "sonner";
 import type { EditorInstance } from "@/types/editor";
+import {
+  listModulesUseCase,
+  setEntitlementUseCase,
+  type ModuleSummaryModel,
+} from "@/api";
 
-interface ModuleView {
-  id: string;
-  name: string;
-  category: string;
-  tier: "free" | "paid";
-  blockHtml: string;
-  entitlement: "locked" | "trial" | "granted";
-}
+type ModuleView = ModuleSummaryModel;
 
 const ENTITLEMENT_LABEL: Record<ModuleView["entitlement"], string> = {
   locked: "Locked",
@@ -32,9 +30,7 @@ export function ModulePanel({ editor }: { editor: EditorInstance | null }) {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/modules");
-      const data = await res.json();
-      setModules(data.modules ?? []);
+      setModules(await listModulesUseCase.execute());
     } catch {
       toast.error("Failed to load modules");
     } finally {
@@ -61,15 +57,7 @@ export function ModulePanel({ editor }: { editor: EditorInstance | null }) {
 
   const unlock = async (m: ModuleView) => {
     try {
-      const res = await fetch("/api/entitlement", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ moduleId: m.id, state: "granted" }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Upgrade failed");
-      }
+      await setEntitlementUseCase.execute({ moduleId: m.id, state: "granted" });
       toast.success(`${m.name} unlocked`);
       load();
     } catch (error) {

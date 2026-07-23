@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { createSiteUseCase } from "@/api";
+import { createSiteUseCase, listTemplatesUseCase } from "@/api";
 
 interface TemplateOption {
   id: string;
@@ -20,10 +20,9 @@ export function CreateSiteForm() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetch("/api/templates")
-      .then((r) => r.json())
-      .then((d) => {
-        const list: TemplateOption[] = d.templates ?? [];
+    listTemplatesUseCase
+      .execute()
+      .then((list) => {
         setTemplates(list);
         if (list[0]) setTemplateId(list[0].id);
       })

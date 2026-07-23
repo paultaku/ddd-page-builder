@@ -5,23 +5,16 @@ import { Button } from "@/components/ui/button";
 import { LayoutTemplate, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { EditorInstance } from "@/types/editor";
+import {
+  listTemplatesUseCase,
+  getTemplateUseCase,
+  createTemplateUseCase,
+  removeTemplateUseCase,
+  setEntitlementUseCase,
+  type TemplateSummaryModel,
+} from "@/api";
 
-interface TemplateView {
-  id: string;
-  name: string;
-  category: string;
-  tier: "free" | "paid";
-  source: "seed" | "user";
-  thumbnail?: string;
-  entitlement: "locked" | "trial" | "granted";
-}
-
-interface FullTemplate {
-  id: string;
-  name: string;
-  html: string;
-  css: string;
-}
+type TemplateView = TemplateSummaryModel;
 
 const ENTITLEMENT_LABEL: Record<TemplateView["entitlement"], string> = {
   locked: "Locked",
@@ -58,9 +51,7 @@ export function TemplatePanel({
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/templates");
-      const data = await res.json();
-      setTemplates(data.templates ?? []);
+      setTemplates(await listTemplatesUseCase.execute());
     } catch {
       toast.error("Failed to load templates");
     } finally {
@@ -80,9 +71,7 @@ export function TemplatePanel({
       return;
     }
     try {
-      const res = await fetch(`/api/templates/${t.id}`);
-      if (!res.ok) throw new Error("Template not found");
-      const { template } = (await res.json()) as { template: FullTemplate };
+      const template = await getTemplateUseCase.execute(t.id);
       // Import replaces canvas content — the template is a starting point.
       editor.setComponents(template.html);
       if (template.css) editor.setStyle(template.css);
@@ -100,15 +89,10 @@ export function TemplatePanel({
 
   const unlock = async (t: TemplateView) => {
     try {
-      const res = await fetch("/api/entitlement", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ templateId: t.id, state: "granted" }),
+      await setEntitlementUseCase.execute({
+        templateId: t.id,
+        state: "granted",
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Upgrade failed");
-      }
       toast.success(`${t.name} unlocked`);
       load();
     } catch (error) {
@@ -132,20 +116,12 @@ export function TemplatePanel({
       return;
     }
     try {
-      const res = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          category: newCategory,
-          html: editor.getHtml(),
-          css: editor.getCss(),
-        }),
+      await createTemplateUseCase.execute({
+        name,
+        category: newCategory,
+        html: editor.getHtml(),
+        css: editor.getCss(),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Save failed");
-      }
       setNewName("");
       toast.success(`Saved template "${name}"`);
       load();
@@ -160,11 +136,7 @@ export function TemplatePanel({
 
   const remove = async (t: TemplateView) => {
     try {
-      const res = await fetch(`/api/templates/${t.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Delete failed");
-      }
+      await removeTemplateUseCase.execute(t.id);
       toast.success(`Deleted "${t.name}"`);
       load();
     } catch (error) {
