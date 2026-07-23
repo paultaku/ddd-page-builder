@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/use-i18n";
 import type { ColorPalette } from "@/domain/site/ColorPalette";
+import { updateSitePaletteUseCase } from "@/api";
 
 const SLOTS: Array<{ key: keyof ColorPalette; labelKey: string }> = [
   { key: "primary", labelKey: "palette.primary" },
@@ -32,12 +33,7 @@ export function SitePaletteEditor({
   const save = async () => {
     setBusy(true);
     try {
-      const res = await fetch(`/api/sites/${siteId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ colorPalette: palette }),
-      });
-      if (!res.ok) throw new Error();
+      await updateSitePaletteUseCase.execute({ siteId, colorPalette: palette });
       toast.success(t("dashboard.paletteSaved"));
     } catch {
       toast.error(t("dashboard.paletteSaveFailed"));

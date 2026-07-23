@@ -24,8 +24,6 @@ import {
   SaveData,
   SaveStatus,
   PageSaveData,
-  ApiResponse,
-  StoredPage,
 } from "@/types/editor";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -33,6 +31,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { ModulePanel } from "@/components/module-panel";
 import { TemplatePanel } from "@/components/template-panel";
 import { injectPurchaseUrl } from "@/lib/purchaseLink";
+import {
+  savePageUseCase,
+  publishPageUseCase,
+  getPageUseCase,
+  ApiError,
+} from "@/api";
 import "./editor.css";
 
 // Which editing surface is active. "visual" = the GrapeJS canvas; "code" = raw
@@ -256,39 +260,35 @@ export default function EditorPage() {
         console.log("Page save event emitted:", saveData);
       }
 
-      // Call REST API
-      const response = await fetch(`/api/page/${uuid}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(saveData),
+      // Persist through the client API layer (SavePageUseCase). It throws on any
+      // non-2xx (ApiError), so reaching the next line means the save succeeded.
+      await savePageUseCase.execute({
+        uuid,
+        html,
+        css,
+        templateId,
+        purchaseUrl,
+        pageTitle: pageTitle || "Untitled Page",
       });
 
-      const result: ApiResponse = await response.json();
+      setSaveStatus("saved");
+      // The page is now persisted server-side under this stable UUID and can
+      // be reopened via /editor?uuid=... or from the My Pages list.
+      toast.success(`Page saved. UUID: ${uuid}`);
 
-      if (response.ok && result.success) {
-        setSaveStatus("saved");
-        // The page is now persisted server-side under this stable UUID and can
-        // be reopened via /editor?uuid=... or from the My Pages list.
-        toast.success(`Page saved. UUID: ${uuid}`);
+      // Also save to localStorage as backup. html/css reflect the active mode;
+      // components/styles are GrapeJS's structured backup of the canvas.
+      const localSaveData: SaveData = {
+        html,
+        css,
+        components: editor.getComponents().toJSON(),
+        styles: editor.getStyle().toJSON(),
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem("pageEditorData", JSON.stringify(localSaveData));
 
-        // Also save to localStorage as backup. html/css reflect the active mode;
-        // components/styles are GrapeJS's structured backup of the canvas.
-        const localSaveData: SaveData = {
-          html,
-          css,
-          components: editor.getComponents().toJSON(),
-          styles: editor.getStyle().toJSON(),
-          timestamp: new Date().toISOString(),
-        };
-        localStorage.setItem("pageEditorData", JSON.stringify(localSaveData));
-
-        // Reset status after 3 seconds
-        setTimeout(() => setSaveStatus("idle"), 3000);
-      } else {
-        throw new Error(result.error || "Save failed");
-      }
+      // Reset status after 3 seconds
+      setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (error) {
       console.error("Save failed:", error);
       setSaveStatus("error");
@@ -322,45 +322,23 @@ export default function EditorPage() {
       // Persist current content first so the published page is up to date.
       // Source from the active mode, not the GrapeJS canvas directly.
       const { html, css } = getCurrentContent();
-      const saveResponse = await fetch(`/api/page/${uuid}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uuid,
-          html,
-          css,
-          templateId,
-          purchaseUrl,
-          metadata: { pageTitle: pageTitle || "Untitled Page" },
-        }),
+      await savePageUseCase.execute({
+        uuid,
+        html,
+        css,
+        templateId,
+        purchaseUrl,
+        pageTitle: pageTitle || "Untitled Page",
       });
-      if (!saveResponse.ok) {
-        throw new Error("Failed to save before publishing");
-      }
 
-      const publishResponse = await fetch(`/api/page/${uuid}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ published: true }),
+      // PublishPageUseCase maps a gated 403 into a PublishBlockedError whose
+      // message is the ready-to-toast "Upgrade required for: …" string.
+      const { url } = await publishPageUseCase.execute({
+        uuid,
+        published: true,
       });
-      const publishResult = await publishResponse.json();
-      if (!publishResponse.ok || !publishResult.success) {
-        // Surface a gated-publish (module and/or template) or any other failure.
-        const blockedNames: string[] = [
-          ...((publishResult.blockedModules as Array<{ name: string }>) ?? []).map(
-            (m) => m.name
-          ),
-          ...(publishResult.blockedTemplate
-            ? [publishResult.blockedTemplate.name]
-            : []),
-        ];
-        if (blockedNames.length) {
-          throw new Error(`Upgrade required for: ${blockedNames.join(", ")}`);
-        }
-        throw new Error(publishResult.error || "Publish failed");
-      }
 
-      const publicUrl = `${window.location.origin}${publishResult.url}`;
+      const publicUrl = `${window.location.origin}${url}`;
       try {
         await navigator.clipboard.writeText(publicUrl);
         toast.success(`Published! URL copied: ${publicUrl}`);
@@ -510,14 +488,9 @@ export default function EditorPage() {
     // adopt its stable identity so the next save is an update.
     const uuidParam = new URLSearchParams(window.location.search).get("uuid");
     if (uuidParam) {
-      fetch(`/api/page/${uuidParam}`)
-        .then(async (res) => (res.ok ? ((await res.json()) as { page: StoredPage }) : null))
-        .then((data) => {
-          if (!data?.page) {
-            toast.error("Page not found");
-            return;
-          }
-          const { page } = data;
+      getPageUseCase
+        .execute(uuidParam)
+        .then((page) => {
           editor.setComponents(page.html);
           if (page.css) editor.setStyle(page.css);
           setPageUuid(page.uuid);
@@ -528,7 +501,12 @@ export default function EditorPage() {
         })
         .catch((error) => {
           console.error("Failed to load page:", error);
-          toast.error("Failed to load page");
+          // A missing page returns 404 (ApiError); keep the distinct message.
+          toast.error(
+            error instanceof ApiError && error.status === 404
+              ? "Page not found"
+              : "Failed to load page"
+          );
         });
       return;
     }

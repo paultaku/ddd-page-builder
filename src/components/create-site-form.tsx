@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { createSiteUseCase } from "@/api";
 
 interface TemplateOption {
   id: string;
@@ -45,15 +46,7 @@ export function CreateSiteForm() {
       .map((title) => ({ title }));
     setBusy(true);
     try {
-      const res = await fetch("/api/sites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), templateId, pages }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Create failed");
-      }
+      await createSiteUseCase.execute({ name: name.trim(), templateId, pages });
       toast.success("Site created");
       window.location.reload();
     } catch (error) {

@@ -9,6 +9,11 @@ import { CreateSiteForm } from "@/components/create-site-form";
 import { SitePaletteEditor } from "@/components/site-palette-editor";
 import type { ColorPalette } from "@/domain/site/ColorPalette";
 import {
+  listPagesUseCase,
+  listSitesUseCase,
+  assignPageToProjectUseCase,
+} from "@/api";
+import {
   DEFAULT_SETTINGS,
   readSettings,
   saveSettings,
@@ -59,24 +64,22 @@ export default function DashboardPage() {
 
   // My Pages + My Sites (both APIs return newest-first).
   const loadPages = () =>
-    fetch("/api/pages")
-      .then((r) => r.json())
-      .then((d) => setPages(d.pages ?? []))
+    listPagesUseCase
+      .execute()
+      .then((p) => setPages(p))
       .catch(() => setPages([]));
   const loadSites = () =>
-    fetch("/api/sites")
-      .then((r) => r.json())
-      .then((d) => setSites(d.sites ?? []))
+    listSitesUseCase
+      .execute()
+      .then((s) => setSites(s))
       .catch(() => setSites([]));
 
   // Assign a page to a project (or detach with ""). Single-project membership is
   // enforced server-side; refresh both lists so counts and selection stay true.
   const assignProject = async (uuid: string, siteId: string) => {
-    await fetch(`/api/page/${uuid}/project`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ siteId: siteId || null }),
-    }).catch(() => {});
+    await assignPageToProjectUseCase
+      .execute({ uuid, siteId: siteId || null })
+      .catch(() => {});
     await Promise.all([loadPages(), loadSites()]);
   };
 
