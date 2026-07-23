@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import type { MediaItem } from "@/domain/media/MediaItem";
+import {
+  listMediaUseCase,
+  uploadMediaUseCase,
+  updateMediaUseCase,
+  removeMediaUseCase,
+  addMediaCategoryUseCase,
+  removeMediaCategoryUseCase,
+  type MediaItemModel,
+} from "@/api";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -21,7 +29,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export default function MediaLibraryPage() {
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const [items, setItems] = useState<MediaItemModel[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [newCategory, setNewCategory] = useState("");
@@ -31,10 +39,9 @@ export default function MediaLibraryPage() {
 
   const load = async () => {
     try {
-      const res = await fetch("/api/media");
-      const data = await res.json();
-      setItems(data.items ?? []);
-      setCategories(data.categories ?? []);
+      const { items, categories } = await listMediaUseCase.execute();
+      setItems(items);
+      setCategories(categories);
     } catch {
       toast.error("Failed to load media");
     }
@@ -51,21 +58,13 @@ export default function MediaLibraryPage() {
     try {
       for (const file of Array.from(files)) {
         const dataUrl = await readFileAsDataUrl(file);
-        const res = await fetch("/api/media", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            mimeType: file.type || "application/octet-stream",
-            size: file.size,
-            dataUrl,
-            category: uploadCategory || null,
-          }),
+        await uploadMediaUseCase.execute({
+          filename: file.name,
+          mimeType: file.type || "application/octet-stream",
+          size: file.size,
+          dataUrl,
+          category: uploadCategory || null,
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Failed to upload ${file.name}`);
-        }
       }
       toast.success("Uploaded");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -78,29 +77,24 @@ export default function MediaLibraryPage() {
   };
 
   // --- Item functions ---
-  const rename = async (item: MediaItem) => {
+  const rename = async (item: MediaItemModel) => {
     const name = window.prompt("Rename file", item.filename);
     if (!name || name === item.filename) return;
-    await fetch(`/api/media/${item.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: name }),
+    await updateMediaUseCase.execute({ id: item.id, filename: name });
+    load();
+  };
+
+  const setItemCategory = async (item: MediaItemModel, category: string) => {
+    await updateMediaUseCase.execute({
+      id: item.id,
+      category: category || null,
     });
     load();
   };
 
-  const setItemCategory = async (item: MediaItem, category: string) => {
-    await fetch(`/api/media/${item.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category: category || null }),
-    });
-    load();
-  };
-
-  const remove = async (item: MediaItem) => {
+  const remove = async (item: MediaItemModel) => {
     if (!window.confirm(`Delete "${item.filename}"?`)) return;
-    await fetch(`/api/media/${item.id}`, { method: "DELETE" });
+    await removeMediaUseCase.execute(item.id);
     toast.success("Deleted");
     load();
   };
@@ -109,15 +103,11 @@ export default function MediaLibraryPage() {
   const addCategory = async () => {
     const name = newCategory.trim();
     if (!name) return;
-    const res = await fetch("/api/media/categories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    if (res.ok) {
+    try {
+      await addMediaCategoryUseCase.execute(name);
       setNewCategory("");
       load();
-    } else {
+    } catch {
       toast.error("Failed to add category");
     }
   };
@@ -125,9 +115,7 @@ export default function MediaLibraryPage() {
   const removeCategory = async (name: string) => {
     if (!window.confirm(`Remove category "${name}"? Items keep their files.`))
       return;
-    await fetch(`/api/media/categories/${encodeURIComponent(name)}`, {
-      method: "DELETE",
-    });
+    await removeMediaCategoryUseCase.execute(name);
     if (filter === name) setFilter("all");
     load();
   };

@@ -6,6 +6,7 @@ import { Github } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
 import { useI18n } from "@/i18n/use-i18n";
 import type { AuthMethod } from "@/domain/auth/User";
+import { loginUseCase } from "@/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,14 +24,8 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method, ...payload }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
-      login(data.user);
+      const user = await loginUseCase.execute({ method, ...payload });
+      login(user);
       router.push("/dashboard");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
