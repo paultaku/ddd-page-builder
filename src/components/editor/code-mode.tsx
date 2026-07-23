@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { html as htmlLang } from "@codemirror/lang-html";
 import { css as cssLang } from "@codemirror/lang-css";
+import { toast } from "sonner";
 import { injectPurchaseUrl } from "@/lib/purchaseLink";
 
 // Code mode: raw HTML + CSS editing with a live, sandboxed preview.
@@ -35,6 +36,44 @@ export function CodeMode({
   purchaseUrl: string;
 }) {
   const [pane, setPane] = useState<CodePane>("html");
+  // True while a Format run (dynamic import + prettier.format) is in flight. The
+  // first click pays the lazy Prettier chunk fetch, so we disable the button and
+  // show a transient label rather than let it be re-triggered mid-flight.
+  const [isFormatting, setIsFormatting] = useState(false);
+
+  // Pretty-print the ACTIVE pane only (HTML on the HTML tab, CSS on the CSS tab).
+  //
+  // Prettier is imported DYNAMICALLY here on purpose: it must never enter the
+  // initial /editor chunk or the CodeMirror chunk. It fetches its own lazy chunk
+  // only on the first Format click. A parse failure throws — we catch it, toast,
+  // and leave the buffer untouched (never blank the user's code).
+  async function formatActive() {
+    if (isFormatting) return;
+    setIsFormatting(true);
+    try {
+      const prettier = await import("prettier/standalone");
+      const plugin = await import(
+        pane === "html" ? "prettier/plugins/html" : "prettier/plugins/postcss"
+      );
+      const out = await prettier.format(pane === "html" ? html : css, {
+        parser: pane === "html" ? "html" : "css",
+        plugins: [(plugin as unknown as { default?: unknown }).default ?? plugin],
+      });
+      if (pane === "html") {
+        onHtmlChange(out);
+      } else {
+        onCssChange(out);
+      }
+    } catch (err) {
+      toast.error(
+        `Could not format ${pane.toUpperCase()}: ${
+          err instanceof Error ? err.message : "invalid syntax"
+        }`
+      );
+    } finally {
+      setIsFormatting(false);
+    }
+  }
 
   // Debounce the preview so fast keystrokes don't thrash the iframe. We debounce
   // on the raw html/css and rebuild srcDoc from the settled values.
@@ -104,6 +143,17 @@ body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont,
           <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-400">
             {pane === "html" ? "Page.html" : "Page.css"}
           </span>
+          {/* Formats the ACTIVE pane only. Prettier loads lazily on first click
+              (dynamic import in formatActive) — it is not in the initial chunk. */}
+          <button
+            type="button"
+            onClick={formatActive}
+            disabled={isFormatting}
+            title={`Format ${pane === "html" ? "HTML" : "CSS"} with Prettier`}
+            className="ml-auto rounded px-3 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-200 transition-colors hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600"
+          >
+            {isFormatting ? "Formatting…" : "Format"}
+          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto">

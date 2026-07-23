@@ -607,42 +607,6 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Editing surface switch: Visual (GrapeJS) vs Code (HTML+CSS). */}
-          <div
-            role="tablist"
-            aria-label="Editor mode"
-            className="flex items-center rounded-md border border-gray-200 bg-gray-50 p-0.5"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "visual"}
-              onClick={() => switchMode("visual")}
-              className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 ${
-                mode === "visual"
-                  ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <Layout className="h-3.5 w-3.5" />
-              Visual
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "code"}
-              onClick={() => switchMode("code")}
-              className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 ${
-                mode === "code"
-                  ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <Code2 className="h-3.5 w-3.5" />
-              Code
-            </button>
-          </div>
-          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
           <Button
             onClick={handleSave}
             variant="default"
@@ -687,6 +651,50 @@ export default function EditorPage() {
           id="editor-action-bar"
           className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center gap-4 flex-wrap"
         >
+          <ToolGroup label="View">
+            {/* Editing surface switch: Visual (GrapeJS) vs Code (HTML+CSS).
+                Relocated here from the always-visible nav row — when the Tools
+                row is collapsed this switch is hidden; expand Tools to change
+                modes. The Format button lives in the code pane, so it stays
+                reachable in Code mode regardless of collapse state. */}
+            <div
+              role="tablist"
+              aria-label="Editor mode"
+              className="flex items-center rounded-md border border-gray-200 bg-gray-50 p-0.5"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "visual"}
+                onClick={() => switchMode("visual")}
+                className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 ${
+                  mode === "visual"
+                    ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Layout className="h-3.5 w-3.5" />
+                Visual
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "code"}
+                onClick={() => switchMode("code")}
+                className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 ${
+                  mode === "code"
+                    ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Code2 className="h-3.5 w-3.5" />
+                Code
+              </button>
+            </div>
+          </ToolGroup>
+
+          <div className="h-5 w-px bg-gray-200" aria-hidden="true" />
+
           <ToolGroup label="Insert">
             {/* Insert writes to the GrapeJS canvas (editor.setComponents), which
                 has no meaning against the code buffers — disable it in code mode
