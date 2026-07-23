@@ -2,6 +2,8 @@ import { promises as fs } from "fs";
 import path from "path";
 import { normalizeSite, type Site } from "@/domain/site/Site";
 import type { SiteRepository } from "@/domain/site/SiteRepository";
+import { getPersistenceDriver } from "@/infrastructure/persistence/config";
+import { SqliteSiteRepository } from "./SqliteSiteRepository";
 
 // Filesystem-backed site store: one JSON file per site. Mirrors
 // FilePageRepository; requires the Node.js runtime.
@@ -70,6 +72,11 @@ export class FileSiteRepository implements SiteRepository {
 
 let repository: SiteRepository | null = null;
 export function getSiteRepository(): SiteRepository {
-  if (!repository) repository = new FileSiteRepository();
+  if (!repository) {
+    repository =
+      getPersistenceDriver() === "sqlite"
+        ? new SqliteSiteRepository()
+        : new FileSiteRepository();
+  }
   return repository;
 }

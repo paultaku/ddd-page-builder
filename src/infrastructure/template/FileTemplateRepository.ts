@@ -2,6 +2,17 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { Template } from "@/domain/template/Template";
 import type { TemplateRepository } from "@/domain/template/TemplateRepository";
+import { getPersistenceDriver } from "@/infrastructure/persistence/config";
+import { SqliteTemplateRepository } from "./SqliteTemplateRepository";
+
+// The user-template store extends the read-only domain port with the write ops
+// (save/delete) the templates API needs. This is an infrastructure interface,
+// not a domain port — it's the shared shape the File and Sqlite adapters honour
+// so the factory can return either behind one type.
+export interface UserTemplateRepository extends TemplateRepository {
+  save(template: Template): Promise<Template>;
+  delete(id: string): Promise<boolean>;
+}
 
 // User-authored templates: one JSON file per template under a gitignored data
 // dir. Mirrors FilePageRepository. Adds save/delete beyond the read-only port.
@@ -15,7 +26,7 @@ function isEnoent(err: unknown): boolean {
   );
 }
 
-export class FileTemplateRepository implements TemplateRepository {
+export class FileTemplateRepository implements UserTemplateRepository {
   private filePath(id: string): string {
     return path.join(DATA_DIR, `${id}.json`);
   }
@@ -67,8 +78,13 @@ export class FileTemplateRepository implements TemplateRepository {
   }
 }
 
-let repository: FileTemplateRepository | null = null;
-export function getUserTemplateRepository(): FileTemplateRepository {
-  if (!repository) repository = new FileTemplateRepository();
+let repository: UserTemplateRepository | null = null;
+export function getUserTemplateRepository(): UserTemplateRepository {
+  if (!repository) {
+    repository =
+      getPersistenceDriver() === "sqlite"
+        ? new SqliteTemplateRepository()
+        : new FileTemplateRepository();
+  }
   return repository;
 }
