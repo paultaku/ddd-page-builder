@@ -2,6 +2,8 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { MediaItem } from "@/domain/media/MediaItem";
 import type { MediaRepository } from "@/domain/media/MediaRepository";
+import { getPersistenceDriver } from "@/infrastructure/persistence/config";
+import { SqliteMediaRepository } from "./SqliteMediaRepository";
 
 // Filesystem media store: one JSON file per item (data URL inline) under a
 // gitignored data dir, plus a categories.json. Requires the Node.js runtime.
@@ -120,6 +122,11 @@ export class FileMediaRepository implements MediaRepository {
 
 let repository: MediaRepository | null = null;
 export function getMediaRepository(): MediaRepository {
-  if (!repository) repository = new FileMediaRepository();
+  if (!repository) {
+    repository =
+      getPersistenceDriver() === "sqlite"
+        ? new SqliteMediaRepository()
+        : new FileMediaRepository();
+  }
   return repository;
 }

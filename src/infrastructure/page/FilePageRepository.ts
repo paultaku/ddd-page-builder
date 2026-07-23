@@ -2,6 +2,8 @@ import { promises as fs } from "fs";
 import path from "path";
 import { normalizePage, type Page } from "@/domain/page/Page";
 import type { PageRepository } from "@/domain/page/PageRepository";
+import { getPersistenceDriver } from "@/infrastructure/persistence/config";
+import { SqlitePageRepository } from "./SqlitePageRepository";
 
 // Filesystem-backed adapter. One JSON file per page under a gitignored data dir.
 // Requires the Node.js runtime (not edge) — route handlers using it declare
@@ -62,9 +64,16 @@ export class FilePageRepository implements PageRepository {
   }
 }
 
-// Single shared instance so the (deferred) DB swap happens in exactly one place.
+// Single shared instance so the DB swap happens in exactly one place. The
+// concrete adapter is chosen by the PERSISTENCE driver (default "file"), so
+// callers/routes importing getPageRepository() are unchanged.
 let repository: PageRepository | null = null;
 export function getPageRepository(): PageRepository {
-  if (!repository) repository = new FilePageRepository();
+  if (!repository) {
+    repository =
+      getPersistenceDriver() === "sqlite"
+        ? new SqlitePageRepository()
+        : new FilePageRepository();
+  }
   return repository;
 }

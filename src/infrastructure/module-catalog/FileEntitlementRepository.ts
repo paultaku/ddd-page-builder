@@ -6,6 +6,8 @@ import {
   type EntitlementState,
 } from "@/domain/module-catalog/Entitlement";
 import type { ModuleTier } from "@/domain/module-catalog/Module";
+import { getPersistenceDriver } from "@/infrastructure/persistence/config";
+import { SqliteEntitlementRepository } from "./SqliteEntitlementRepository";
 
 // File-backed entitlement store: one JSON file per owner mapping moduleId to
 // state. Missing entries fall back to the tier default. Swappable for a DB /
@@ -62,6 +64,11 @@ export class FileEntitlementRepository implements EntitlementRepository {
 
 let repository: EntitlementRepository | null = null;
 export function getEntitlementRepository(): EntitlementRepository {
-  if (!repository) repository = new FileEntitlementRepository();
+  if (!repository) {
+    repository =
+      getPersistenceDriver() === "sqlite"
+        ? new SqliteEntitlementRepository()
+        : new FileEntitlementRepository();
+  }
   return repository;
 }
